@@ -1083,19 +1083,13 @@ macroSubBtn.Parent = pvpScroll
 Instance.new("UICorner", macroSubBtn).CornerRadius = UDim.new(0, 4)
 
 ----------------------------------------------------
--- PANEL MACRO COMBO (GODHUMAN C + TTK + PORTAL)
--- El usuario hace Godhuman C manualmente.
--- Al pulsar C con Godhuman equipado, se ejecuta:
--- 1) TTK X
--- 2) TTK Z
--- 3) Cambio inmediato a Portal
--- 4) Portal Z
--- No incluye acercamiento automático.
+-- PANEL MACRO COMBO (5 HABILIDADES)
+-- Basado en la lógica de Macro Beta del código fuente:
+-- equipar slot + pulsar tecla + delay fijo de 0.20 s.
 ----------------------------------------------------
-
 local macroFrame = Instance.new("Frame")
 macroFrame.Name = "MacroFrame"
-macroFrame.Size = UDim2.new(0, 210, 0, 280)
+macroFrame.Size = UDim2.new(0, 210, 0, 360)
 macroFrame.Position = UDim2.new(0, -220, 0, 10)
 macroFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 macroFrame.BorderSizePixel = 0
@@ -1106,7 +1100,7 @@ Instance.new("UICorner", macroFrame).CornerRadius = UDim.new(0, 10)
 local macroTitle = Instance.new("TextLabel")
 macroTitle.Size = UDim2.new(1, 0, 0, 25)
 macroTitle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
-macroTitle.Text = "⚡ MACRO PORTAL + TTK"
+macroTitle.Text = "⚡ MACRO COMBO x5"
 macroTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 macroTitle.TextSize = 10
 macroTitle.Font = Enum.Font.GothamBold
@@ -1119,41 +1113,103 @@ macroScroll.Position = UDim2.new(0, 0, 0, 30)
 macroScroll.BackgroundTransparency = 1
 macroScroll.BorderSizePixel = 0
 macroScroll.ScrollBarThickness = 4
-macroScroll.CanvasSize = UDim2.new(0, 0, 0, 230)
+macroScroll.CanvasSize = UDim2.new(0, 0, 0, 390)
 macroScroll.Parent = macroFrame
 
 local macroLayout = Instance.new("UIListLayout")
-macroLayout.Padding = UDim.new(0, 6)
+macroLayout.Padding = UDim.new(0, 5)
 macroLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 macroLayout.Parent = macroScroll
 
-Instance.new("UIPadding", macroScroll).PaddingTop = UDim.new(0, 7)
+Instance.new("UIPadding", macroScroll).PaddingTop = UDim.new(0, 6)
 
 _G.MacroEnabled = false
 _G.MacroExecuting = false
 _G.MacroDelay = 0.20
 
-local macroInfo = Instance.new("TextLabel")
-macroInfo.Size = UDim2.new(0.92, 0, 0, 48)
-macroInfo.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-macroInfo.Text = "Activa MACRO y haz Godhuman C tú mismo.\nAl pulsar C: TTK X → TTK Z → Portal Z."
-macroInfo.TextColor3 = Color3.fromRGB(220, 220, 230)
-macroInfo.TextSize = 9
-macroInfo.Font = Enum.Font.GothamMedium
-macroInfo.TextWrapped = true
-macroInfo.Parent = macroScroll
-Instance.new("UICorner", macroInfo).CornerRadius = UDim.new(0, 5)
+local MacroSlots = {1, 2, 3, 4, 1}
+local MacroKeys = {"Z", "X", "C", "V", "F"}
 
-local macroStepLabel = Instance.new("TextLabel")
-macroStepLabel.Size = UDim2.new(0.92, 0, 0, 54)
-macroStepLabel.BackgroundTransparency = 1
-macroStepLabel.Text = "1️⃣ Godhuman C (manual)\n2️⃣ TTK X → TTK Z\n3️⃣ Portal Z\n4️⃣ Sin acercamiento automático"
-macroStepLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
-macroStepLabel.TextSize = 9
-macroStepLabel.Font = Enum.Font.GothamBold
-macroStepLabel.TextXAlignment = Enum.TextXAlignment.Left
-macroStepLabel.TextYAlignment = Enum.TextYAlignment.Center
-macroStepLabel.Parent = macroScroll
+local slotNames = {
+	[1] = "1", [2] = "2", [3] = "3", [4] = "4"
+}
+
+local keyNames = {"Z", "X", "C", "V", "F"}
+
+local macroRows = {}
+
+local function makeMacroRow(index)
+	local row = Instance.new("Frame")
+	row.Size = UDim2.new(0.92, 0, 0, 42)
+	row.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+	row.BorderSizePixel = 0
+	row.Parent = macroScroll
+	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 5)
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0, 70, 1, 0)
+	label.Position = UDim2.new(0, 5, 0, 0)
+	label.BackgroundTransparency = 1
+	label.Text = "Habilidad " .. index
+	label.TextColor3 = Color3.fromRGB(235, 235, 235)
+	label.TextSize = 9
+	label.Font = Enum.Font.GothamBold
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Parent = row
+
+	local slotBtn = Instance.new("TextButton")
+	slotBtn.Size = UDim2.new(0, 42, 0, 22)
+	slotBtn.Position = UDim2.new(0, 82, 0.5, -11)
+	slotBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	slotBtn.Text = "Slot " .. MacroSlots[index]
+	slotBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	slotBtn.TextSize = 8
+	slotBtn.Font = Enum.Font.GothamBold
+	slotBtn.Parent = row
+	Instance.new("UICorner", slotBtn).CornerRadius = UDim.new(0, 4)
+
+	local keyBtn = Instance.new("TextButton")
+	keyBtn.Size = UDim2.new(0, 42, 0, 22)
+	keyBtn.Position = UDim2.new(0, 132, 0.5, -11)
+	keyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	keyBtn.Text = MacroKeys[index]
+	keyBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+	keyBtn.TextSize = 8
+	keyBtn.Font = Enum.Font.GothamBold
+	keyBtn.Parent = row
+	Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 4)
+
+	slotBtn.MouseButton1Click:Connect(function()
+		local current = MacroSlots[index]
+		MacroSlots[index] = (current % 4) + 1
+		slotBtn.Text = "Slot " .. MacroSlots[index]
+	end)
+
+	keyBtn.MouseButton1Click:Connect(function()
+		local current = table.find(keyNames, MacroKeys[index]) or 1
+		local nextIndex = (current % #keyNames) + 1
+		MacroKeys[index] = keyNames[nextIndex]
+		keyBtn.Text = MacroKeys[index]
+	end)
+
+	macroRows[index] = {
+		slot = slotBtn,
+		key = keyBtn
+	}
+end
+
+for i = 1, 5 do
+	makeMacroRow(i)
+end
+
+local macroDelayLabel = Instance.new("TextLabel")
+macroDelayLabel.Size = UDim2.new(0.92, 0, 0, 20)
+macroDelayLabel.BackgroundTransparency = 1
+macroDelayLabel.Text = "⏱️ Delay fijo: 0.20s"
+macroDelayLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+macroDelayLabel.TextSize = 9
+macroDelayLabel.Font = Enum.Font.GothamBold
+macroDelayLabel.Parent = macroScroll
 
 local macroToggleBtn = Instance.new("TextButton")
 macroToggleBtn.Size = UDim2.new(0.92, 0, 0, 22)
@@ -1166,9 +1222,9 @@ macroToggleBtn.Parent = macroScroll
 Instance.new("UICorner", macroToggleBtn).CornerRadius = UDim.new(0, 4)
 
 local macroRunBtn = Instance.new("TextButton")
-macroRunBtn.Size = UDim2.new(0.92, 0, 0, 26)
+macroRunBtn.Size = UDim2.new(0.92, 0, 0, 28)
 macroRunBtn.BackgroundColor3 = Color3.fromRGB(160, 30, 50)
-macroRunBtn.Text = "💥 EJECUTAR MACRO"
+macroRunBtn.Text = "💥 EJECUTAR COMBO x5"
 macroRunBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 macroRunBtn.TextSize = 9
 macroRunBtn.Font = Enum.Font.GothamBold
@@ -1195,16 +1251,21 @@ macroFloatStroke.Color = Color3.fromRGB(150, 0, 255)
 macroFloatStroke.Thickness = 1.5
 macroFloatStroke.Parent = macroFloatBtn
 
-local MACRO_SLOT_TTK = Enum.KeyCode.Two
-local MACRO_SLOT_PORTAL = Enum.KeyCode.Four
+local SLOT_KEYS = {
+	[1] = Enum.KeyCode.One,
+	[2] = Enum.KeyCode.Two,
+	[3] = Enum.KeyCode.Three,
+	[4] = Enum.KeyCode.Four
+}
 
-local function pressMacroKey(keyCode, holdTime)
+local function pressMacroKey(keyCode)
 	if not keyCode then
 		return
 	end
 
+	-- Mismo timing base del macro original.
 	VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-	task.wait(holdTime or 0.08)
+	task.wait(0.08)
 	VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
@@ -1213,77 +1274,80 @@ local function getEquippedTool()
 	return char and char:FindFirstChildOfClass("Tool")
 end
 
-local function equipMacroSlot(slotKey)
-	pressMacroKey(slotKey, 0.08)
-	task.wait(0.12)
-
-	if not getEquippedTool() then
-		pressMacroKey(slotKey, 0.08)
-		task.wait(0.10)
-	end
-
-	return getEquippedTool() ~= nil
-end
-
-local function isGodhumanEquipped()
-	local tool = getEquippedTool()
-	if not tool then
+local function safeMacroEquip(slotNum)
+	local slotKey = SLOT_KEYS[slotNum]
+	if not slotKey then
 		return false
 	end
 
-	return string.find(string.lower(tool.Name), "godhuman", 1, true) ~= nil
+	pressMacroKey(slotKey)
+	task.wait(0.12)
+
+	local tool = getEquippedTool()
+
+	-- El macro original reintenta equipar si no detecta herramienta.
+	if not tool then
+		pressMacroKey(slotKey)
+		task.wait(0.10)
+		tool = getEquippedTool()
+	end
+
+	return tool ~= nil
 end
 
-local function executeMacroCombo()
+local function executeMacro5()
 	if _G.MacroExecuting then
 		return
 	end
 
 	if not _G.MacroEnabled then
-		macroRunBtn.Text = "⚠️ ACTIVA MACRO"
-		task.delay(0.8, function()
+		macroRunBtn.Text = "⚠️ Activa Macro primero"
+		task.delay(1.2, function()
 			if macroRunBtn and macroRunBtn.Parent then
-				macroRunBtn.Text = "💥 ESPERANDO GODHUMAN C"
+				macroRunBtn.Text = "💥 EJECUTAR COMBO x5"
 			end
 		end)
 		return
 	end
 
 	_G.MacroExecuting = true
-	macroRunBtn.Text = "⏳ COMBO..."
+	macroRunBtn.Text = "⏳ EJECUTANDO..."
 
 	local ok = pcall(function()
-		-- 1) TTK X
-		if equipMacroSlot(MACRO_SLOT_TTK) then
+		local lastSlot = nil
+
+		for index = 1, 5 do
+			local slotNum = tonumber(MacroSlots[index])
+			local skillKey = tostring(MacroKeys[index] or "Z")
+			local skillKeyCode = Enum.KeyCode[skillKey]
+
+			-- Solo cambiar de herramienta cuando realmente cambia el slot.
+			if slotNum ~= lastSlot then
+				safeMacroEquip(slotNum)
+				lastSlot = slotNum
+			end
+
+			-- Dejamos tiempo para que la herramienta termine de equiparse.
 			task.wait(0.06)
-			pressMacroKey(Enum.KeyCode.X)
-			task.wait(_G.MacroDelay)
 
-			-- 2) TTK Z
-			pressMacroKey(Enum.KeyCode.Z)
+			if skillKeyCode then
+				pressMacroKey(skillKeyCode)
+			end
 
-			-- 3) Cambio inmediato a Portal
-			task.wait(0.02)
-
-			-- 4) Portal Z
-			if equipMacroSlot(MACRO_SLOT_PORTAL) then
-				task.wait(0.03)
-				pressMacroKey(Enum.KeyCode.Z)
+			-- Delay entre habilidades.
+			-- Mantiene el 0.20 original, pero con margen suficiente para input.
+			if index < 5 then
+				task.wait(_G.MacroDelay)
 			end
 		end
 	end)
 
 	_G.MacroExecuting = false
+	macroRunBtn.Text = ok and "✅ COMBO LISTO" or "❌ ERROR"
 
-	if ok then
-		macroRunBtn.Text = "✅ COMBO LISTO"
-	else
-		macroRunBtn.Text = "❌ ERROR"
-	end
-
-	task.delay(0.8, function()
+	task.delay(1.0, function()
 		if macroRunBtn and macroRunBtn.Parent then
-			macroRunBtn.Text = "💥 ESPERANDO GODHUMAN C"
+			macroRunBtn.Text = "💥 EJECUTAR COMBO x5"
 		end
 	end)
 end
@@ -1306,25 +1370,16 @@ macroToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 macroRunBtn.MouseButton1Click:Connect(function()
-	task.spawn(executeMacroCombo)
+	task.spawn(executeMacro5)
 end)
 
 macroFloatBtn.MouseButton1Click:Connect(function()
-	task.spawn(executeMacroCombo)
+	task.spawn(executeMacro5)
 end)
 
--- Disparador automático: el usuario pulsa C de Godhuman manualmente.
--- Solo se activa si Godhuman está equipado y la macro está en ON.
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-	if gameProcessed then
+macroFloatBtn.MouseButton1Down:Connect(function()
+	if _G.MacroExecuting then
 		return
-	end
-
-	if input.KeyCode == Enum.KeyCode.C
-		and _G.MacroEnabled
-		and not _G.MacroExecuting
-		and isGodhumanEquipped() then
-		task.spawn(executeMacroCombo)
 	end
 end)
 
