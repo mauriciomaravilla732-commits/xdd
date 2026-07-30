@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -1230,6 +1231,26 @@ macroRunBtn.Font = Enum.Font.GothamBold
 macroRunBtn.Parent = macroScroll
 Instance.new("UICorner", macroRunBtn).CornerRadius = UDim.new(0, 4)
 
+local macroFloatBtn = Instance.new("TextButton")
+macroFloatBtn.Name = "MacroFloat"
+macroFloatBtn.Size = UDim2.new(0, 58, 0, 40)
+macroFloatBtn.Position = UDim2.new(0.85, 0, 0.60, 0)
+macroFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+macroFloatBtn.Text = "MACRO"
+macroFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+macroFloatBtn.TextSize = 11
+macroFloatBtn.Font = Enum.Font.GothamBold
+macroFloatBtn.Visible = false
+macroFloatBtn.Active = true
+macroFloatBtn.Draggable = true
+macroFloatBtn.Parent = screenGui
+Instance.new("UICorner", macroFloatBtn).CornerRadius = UDim.new(0, 8)
+
+local macroFloatStroke = Instance.new("UIStroke")
+macroFloatStroke.Color = Color3.fromRGB(150, 0, 255)
+macroFloatStroke.Thickness = 1.5
+macroFloatStroke.Parent = macroFloatBtn
+
 local SLOT_KEYS = {
 	[1] = Enum.KeyCode.One,
 	[2] = Enum.KeyCode.Two,
@@ -1268,19 +1289,33 @@ local function executeMacro5()
 		return
 	end
 
+	if not _G.MacroEnabled then
+		macroRunBtn.Text = "⚠️ Activa Macro primero"
+		task.delay(1.2, function()
+			if macroRunBtn and macroRunBtn.Parent then
+				macroRunBtn.Text = "💥 EJECUTAR COMBO x5"
+			end
+		end)
+		return
+	end
+
 	_G.MacroExecuting = true
+	macroRunBtn.Text = "⏳ EJECUTANDO..."
 
-	pcall(function()
+	local ok = pcall(function()
 		for index = 1, 5 do
-			local slotNum = MacroSlots[index]
-			local skillKey = MacroKeys[index]
+			local slotNum = tonumber(MacroSlots[index])
+			local skillKey = tostring(MacroKeys[index] or "Z")
+			local slotKey = SLOT_KEYS[slotNum]
+			local skillKeyCode = Enum.KeyCode[skillKey]
 
-			safeMacroEquip(slotNum)
-			task.wait(0.04)
+			if slotKey then
+				pressMacroKey(slotKey)
+				task.wait(0.08)
+			end
 
-			local keyCode = Enum.KeyCode[skillKey]
-			if keyCode then
-				pressMacroKey(keyCode)
+			if skillKeyCode then
+				pressMacroKey(skillKeyCode)
 			end
 
 			if index < 5 then
@@ -1290,15 +1325,24 @@ local function executeMacro5()
 	end)
 
 	_G.MacroExecuting = false
+	macroRunBtn.Text = ok and "✅ COMBO LISTO" or "❌ ERROR"
+
+	task.delay(1.0, function()
+		if macroRunBtn and macroRunBtn.Parent then
+			macroRunBtn.Text = "💥 EJECUTAR COMBO x5"
+		end
+	end)
 end
 
 local function updateMacroToggle()
 	if _G.MacroEnabled then
 		macroToggleBtn.Text = "⚡ Macro: ON"
 		macroToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
+		macroFloatBtn.Visible = true
 	else
 		macroToggleBtn.Text = "⚡ Macro: OFF"
 		macroToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+		macroFloatBtn.Visible = false
 	end
 end
 
@@ -1308,10 +1352,14 @@ macroToggleBtn.MouseButton1Click:Connect(function()
 end)
 
 macroRunBtn.MouseButton1Click:Connect(function()
-	if _G.MacroEnabled then
-		task.spawn(executeMacro5)
-	end
+	task.spawn(executeMacro5)
 end)
+
+macroFloatBtn.MouseButton1Click:Connect(function()
+	task.spawn(executeMacro5)
+end)
+
+updateMacroToggle()
 
 
 ----------------------------------------------------
