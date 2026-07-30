@@ -1259,29 +1259,40 @@ local SLOT_KEYS = {
 }
 
 local function pressMacroKey(keyCode)
+	if not keyCode then
+		return
+	end
+
+	-- Mismo timing base del macro original.
 	VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-	task.wait(0.05)
+	task.wait(0.08)
 	VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
 end
 
-local function hasMacroToolEquipped()
+local function getEquippedTool()
 	local char = player.Character
-	return char and char:FindFirstChildOfClass("Tool") ~= nil
+	return char and char:FindFirstChildOfClass("Tool")
 end
 
 local function safeMacroEquip(slotNum)
 	local slotKey = SLOT_KEYS[slotNum]
 	if not slotKey then
-		return
+		return false
 	end
 
 	pressMacroKey(slotKey)
-	task.wait(0.06)
+	task.wait(0.12)
 
-	if not hasMacroToolEquipped() then
+	local tool = getEquippedTool()
+
+	-- El macro original reintenta equipar si no detecta herramienta.
+	if not tool then
 		pressMacroKey(slotKey)
-		task.wait(0.06)
+		task.wait(0.10)
+		tool = getEquippedTool()
 	end
+
+	return tool ~= nil
 end
 
 local function executeMacro5()
@@ -1303,21 +1314,28 @@ local function executeMacro5()
 	macroRunBtn.Text = "⏳ EJECUTANDO..."
 
 	local ok = pcall(function()
+		local lastSlot = nil
+
 		for index = 1, 5 do
 			local slotNum = tonumber(MacroSlots[index])
 			local skillKey = tostring(MacroKeys[index] or "Z")
-			local slotKey = SLOT_KEYS[slotNum]
 			local skillKeyCode = Enum.KeyCode[skillKey]
 
-			if slotKey then
-				pressMacroKey(slotKey)
-				task.wait(0.08)
+			-- Solo cambiar de herramienta cuando realmente cambia el slot.
+			if slotNum ~= lastSlot then
+				safeMacroEquip(slotNum)
+				lastSlot = slotNum
 			end
+
+			-- Dejamos tiempo para que la herramienta termine de equiparse.
+			task.wait(0.06)
 
 			if skillKeyCode then
 				pressMacroKey(skillKeyCode)
 			end
 
+			-- Delay entre habilidades.
+			-- Mantiene el 0.20 original, pero con margen suficiente para input.
 			if index < 5 then
 				task.wait(_G.MacroDelay)
 			end
@@ -1357,6 +1375,12 @@ end)
 
 macroFloatBtn.MouseButton1Click:Connect(function()
 	task.spawn(executeMacro5)
+end)
+
+macroFloatBtn.MouseButton1Down:Connect(function()
+	if _G.MacroExecuting then
+		return
+	end
 end)
 
 updateMacroToggle()
