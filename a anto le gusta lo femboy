@@ -787,18 +787,28 @@ local function getClosestAimPart()
 	return closest
 end
 
--- Aimbot 360° usando el selector integrado.
-RunService.RenderStepped:Connect(function()
+-- Silent Aim:
+-- NO mueve la cámara. Solo mantiene disponible el objetivo seleccionado.
+_G.G_SilentAimGetTarget = function()
 	if not _G.AimbotActive then
-		return
+		return nil
 	end
+	return getClosestAimPart()
+end
 
-	local targetPart = getClosestAimPart()
-	if targetPart then
-		Camera = workspace.CurrentCamera or Camera
-		if Camera then
-			Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
-		end
+_G.G_SilentAimGetPosition = function()
+	local targetPart = _G.G_SilentAimGetTarget()
+	return targetPart and targetPart.Position or nil
+end
+
+-- Compatibilidad con código que espere PlayersPosition.
+PlayersPosition = nil
+
+RunService.RenderStepped:Connect(function()
+	if _G.AimbotActive then
+		PlayersPosition = _G.G_SilentAimGetTarget()
+	else
+		PlayersPosition = nil
 	end
 end)
 
