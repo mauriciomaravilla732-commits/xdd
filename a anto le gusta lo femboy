@@ -682,21 +682,14 @@ jumpFloatBtn.MouseButton1Click:Connect(function()
 end)
 
 ----------------------------------------------------
--- BOTÓN Y LÓGICA DE AIMBOT / AIMLOCK INTEGRADO
--- Basado en las variables disponibles de AimlockPlayerEnabled.txt
+-- SILENT AIM FULL / SKILL AIMBOT
+-- Extraído de la lógica de Sacred AHK:
+-- selección de objetivo + FOV + distancia + Team Check +
+-- hook de Mouse.Hit / Mouse.Target.
+-- NO mueve la cámara.
 ----------------------------------------------------
 
-local AimlockPlayerEnabled = false
-local AimlockNpcEnabled = false
-local SilentAimPlayersEnabled = false
-local SilentAimNPCsEnabled = false
-local PlayerWidgetActive = false
-local NpcWidgetActive = false
-local SelectedSoruTarget = "Nearest"
-local maxRange = 2500
-local PlayersPosition = nil
-local NPCPosition = nil
-
+_G.AimbotActive = false
 _G.G_SilentAimSkill = false
 _G.G_SilentAimShowFOV = false
 _G.G_SilentAimFOV = 150
@@ -710,76 +703,198 @@ _G.G_SilentAimFOVMode = "Screen Center"
 _G.G_SilentAimTeamCheck = true
 _G.G_SilentAimSelectedPlayer = ""
 
-_G.AimbotActive = false
+local SilentAimPlayersEnabled = false
+local SilentAimNPCsEnabled = false
+local maxRange = 2500
 
+local silentAimMouse = player:GetMouse()
+local currentSilentAimTarget = nil
+
+-- Botón existente del panel PVP.
 local aimbotBtn = Instance.new("TextButton")
 aimbotBtn.Size = UDim2.new(0.9, 0, 0, 20)
 aimbotBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-aimbotBtn.Text = "🎯 Aimbot 360°: OFF"
+aimbotBtn.Text = "🎯 Silent Aim: OFF"
 aimbotBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 aimbotBtn.TextSize = 9
 aimbotBtn.Font = Enum.Font.GothamBold
 aimbotBtn.Parent = pvpScroll
 Instance.new("UICorner", aimbotBtn).CornerRadius = UDim.new(0, 4)
 
-local Camera = workspace.CurrentCamera
-
 local function setAimbotState(state)
 	_G.AimbotActive = state
-	AimlockPlayerEnabled = state
+	_G.G_SilentAimSkill = state
 	_G.G_SilentAimTargetPlayers = state
+	SilentAimPlayersEnabled = state
 
-	if _G.AimbotActive then
-		aimbotBtn.Text = "🎯 Aimbot 360°: ON"
+	if state then
+		aimbotBtn.Text = "🎯 Silent Aim: ON"
 		aimbotBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
 	else
-		aimbotBtn.Text = "🎯 Aimbot 360°: OFF"
+		aimbotBtn.Text = "🎯 Silent Aim: OFF"
 		aimbotBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+		currentSilentAimTarget = nil
 	end
 end
 
 aimbotBtn.MouseButton1Click:Connect(function()
-	setAimbotState(not _G.AimbotActive)
-	updateExecuteCount(_G.AimbotActive and 1 or -1)
+	setAimbotState(not _G.G_SilentAimSkill)
+	updateExecuteCount(_G.G_SilentAimSkill and 1 or -1)
 end)
 
--- Selector de objetivo derivado de la lógica disponible en AimlockPlayerEnabled.txt.
--- Devuelve la parte raíz del jugador más cercano dentro de maxRange.
-local function getClosestAimPart()
-	local closest = nil
-	local shortestDistance = maxRange
+-- Team / ally helpers del código fuente.
+local function IsSilentAimAlly(p)
+	local main = player:FindFirstChild("PlayerGui") and player.PlayerGui:FindFirstChild("Main")
+	local frame = main
+		and main:FindFirstChild("Allies")
+		and main.Allies:FindFirstChild("Container")
+		and main.Allies.Container:FindFirstChild("Allies")
+		and main.Allies.Container.Allies:FindFirstChild("ScrollingFrame")
+		and main.Allies.Container.Allies.ScrollingFrame:FindFirstChild("Frame")
 
+	if not frame then
+		return false
+	end
+
+	return frame:FindFirstChild(p.Name) ~= nil
+end
+
+local function IsSilentAimEnemy(p)
+	if not p or p == player then
+		return false
+	end
+
+	if IsSilentAimAlly(p) then
+		return false
+	end
+
+	local myTeam, targetTeam = player.Team, p.Team
+	if myTeam and targetTeam
+		and myTeam.Name == "Marines"
+		and targetTeam.Name == "Marines" then
+		return false
+	end
+
+	return true
+end
+
+local function GetSilentAimOrigin()
+	local cam = workspace.CurrentCamera
+	if not cam then
+		return Vector2.new(0, 0)
+	end
+
+	local v = cam.ViewportSize
+	return Vector2.new(v.X / 2, v.Y / 2)
+end
+
+-- Selección por FOV + distancia 3D.
+local function GetClosestTargetToCenter()
 	local myChar = player.Character
-	local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
-	if not myRoot then
+	local myHRP = myChar and myChar:FindFirstChild("HumanoidRootPart")
+	if not myHRP then
 		return nil
 	end
 
-	local myPos = myRoot.Position
+	local cam = workspace.CurrentCamera
+	if not cam then
+		return nil
+	end
 
-	if AimlockPlayerEnabled
-		or _G.G_SilentAimTargetPlayers
-		or _G.AimbotActive then
+	local screenCenter = Vector2.new(
+		cam.ViewportSize.X / 2,
+		cam.ViewportSize.Y / 2
+	)
 
-		for _, v in pairs(Players:GetPlayers()) do
-			if v ~= player and v.Character then
-				local hum = v.Character:FindFirstChildOfClass("Humanoid")
-				local root = v.Character:FindFirstChild("HumanoidRootPart")
-				local head = v.Character:FindFirstChild("Head")
+	local fovRadius = _G.G_SilentAimFOV or 150
+	local maxDist3D = maxRange or 2500
 
-				if hum and hum.Health > 0 and root then
-					local sameTeam = player.Team and v.Team == player.Team
+	-- Objetivo fijo seleccionado.
+	if _G.G_SilentAimSelectedPlayer
+		and _G.G_SilentAimSelectedPlayer ~= ""
+		and _G.G_SilentAimSelectedPlayer ~= "Nearest" then
 
-					if not (_G.G_SilentAimTeamCheck and sameTeam) then
-						local targetPart = (_G.G_SilentAimPart == "Head" and head) or root
-						local dist = (targetPart.Position - myPos).Magnitude
+		local targetP = Players:FindFirstChild(_G.G_SilentAimSelectedPlayer)
 
-						if dist <= shortestDistance then
-							shortestDistance = dist
-							closest = targetPart
-						end
+		if targetP
+			and targetP ~= player
+			and targetP.Character
+			and IsSilentAimEnemy(targetP) then
+
+			local hum = targetP.Character:FindFirstChildOfClass("Humanoid")
+			local hrp = targetP.Character:FindFirstChild("HumanoidRootPart")
+
+			if hum and hum.Health > 0 and hrp then
+				local worldDist = (hrp.Position - myHRP.Position).Magnitude
+
+				if worldDist <= maxDist3D then
+					local screenPos, onScreen = cam:WorldToViewportPoint(hrp.Position)
+					local fovDist = (
+						Vector2.new(screenPos.X, screenPos.Y) - screenCenter
+					).Magnitude
+
+					if onScreen and fovDist <= fovRadius then
+						return targetP.Character:FindFirstChild(_G.G_SilentAimPart) or hrp
 					end
 				end
+			end
+		end
+	end
+
+	local closest = nil
+	local shortestDist = maxDist3D
+
+	local function checkNearest(character)
+		if not character then
+			return
+		end
+
+		local p = Players:GetPlayerFromCharacter(character)
+		if p then
+			if p == player then
+				return
+			end
+
+			if not IsSilentAimEnemy(p) then
+				return
+			end
+		end
+
+		local hum = character:FindFirstChildOfClass("Humanoid")
+		if not hum or hum.Health <= 0 then
+			return
+		end
+
+		local part =
+			character:FindFirstChild(_G.G_SilentAimPart)
+			or character:FindFirstChild("HumanoidRootPart")
+
+		if not part then
+			return
+		end
+
+		local worldDist = (part.Position - myHRP.Position).Magnitude
+		if worldDist < shortestDist then
+			shortestDist = worldDist
+			closest = part
+		end
+	end
+
+	if _G.G_SilentAimTargetPlayers or SilentAimPlayersEnabled then
+		for _, p in ipairs(Players:GetPlayers()) do
+			if p ~= player then
+				if not _G.G_SilentAimTeamCheck or IsSilentAimEnemy(p) then
+					checkNearest(p.Character)
+				end
+			end
+		end
+	end
+
+	if (_G.G_SilentAimTargetMobs or SilentAimNPCsEnabled) then
+		local enemies = workspace:FindFirstChild("Enemies")
+		if enemies then
+			for _, enemy in ipairs(enemies:GetChildren()) do
+				checkNearest(enemy)
 			end
 		end
 	end
@@ -787,29 +902,153 @@ local function getClosestAimPart()
 	return closest
 end
 
--- Silent Aim:
--- NO mueve la cámara. Solo mantiene disponible el objetivo seleccionado.
-_G.G_SilentAimGetTarget = function()
-	if not _G.AimbotActive then
-		return nil
+-- Hook del Mouse Module utilizado por el script fuente
+-- para Skills sin necesidad de mover la cámara.
+local MouseModuleInstance = ReplicatedStorage:FindFirstChild("Mouse")
+local MouseModule = nil
+
+if MouseModuleInstance then
+	pcall(function()
+		MouseModule = require(MouseModuleInstance)
+	end)
+end
+
+if MouseModule and typeof(MouseModule) == "table" then
+	pcall(function()
+		local realStore = {
+			Hit = rawget(MouseModule, "Hit"),
+			Target = rawget(MouseModule, "Target")
+		}
+
+		local mmt = getrawmetatable(MouseModule)
+
+		if mmt then
+			setreadonly(mmt, false)
+		else
+			mmt = {}
+			setmetatable(MouseModule, mmt)
+		end
+
+		rawset(MouseModule, "Hit", nil)
+		rawset(MouseModule, "Target", nil)
+
+		mmt.__index = function(self, key)
+			if key == "Hit" then
+				if _G.G_SilentAimSkill and currentSilentAimTarget then
+					return CFrame.new(currentSilentAimTarget.Position)
+				end
+				return realStore.Hit
+
+			elseif key == "Target" then
+				if _G.G_SilentAimSkill and currentSilentAimTarget then
+					return currentSilentAimTarget
+				end
+				return realStore.Target
+			end
+
+			return nil
+		end
+
+		mmt.__newindex = function(self, key, value)
+			if key == "Hit" or key == "Target" then
+				realStore[key] = value
+			else
+				rawset(self, key, value)
+			end
+		end
+
+		setreadonly(mmt, true)
+	end)
+end
+
+-- FOV / Lock line del sistema fuente.
+local FOVCircle
+local LockLine
+
+pcall(function()
+	if Drawing then
+		FOVCircle = Drawing.new("Circle")
+		FOVCircle.Visible = _G.G_SilentAimShowFOV
+		FOVCircle.Color = Color3.fromRGB(255, 0, 0)
+		FOVCircle.Radius = _G.G_SilentAimFOV
+		FOVCircle.Thickness = _G.G_SilentAimFOVThickness
+		FOVCircle.Filled = false
+
+		LockLine = Drawing.new("Line")
+		LockLine.Thickness = 2
+		LockLine.Color = Color3.fromRGB(255, 0, 0)
+		LockLine.Transparency = 1
+		LockLine.Visible = false
 	end
-	return getClosestAimPart()
-end
-
-_G.G_SilentAimGetPosition = function()
-	local targetPart = _G.G_SilentAimGetTarget()
-	return targetPart and targetPart.Position or nil
-end
-
--- Compatibilidad con código que espere PlayersPosition.
-PlayersPosition = nil
+end)
 
 RunService.RenderStepped:Connect(function()
-	if _G.AimbotActive then
-		PlayersPosition = _G.G_SilentAimGetTarget()
-	else
-		PlayersPosition = nil
+	-- El Silent Aim NO modifica Camera.CFrame.
+	if FOVCircle then
+		FOVCircle.Visible = _G.G_SilentAimShowFOV == true
+		FOVCircle.Radius = _G.G_SilentAimFOV or 150
+		FOVCircle.Position = GetSilentAimOrigin()
 	end
+
+	if _G.G_SilentAimSkill then
+		currentSilentAimTarget = GetClosestTargetToCenter()
+	else
+		currentSilentAimTarget = nil
+	end
+
+	if LockLine then
+		if _G.G_SilentAimShowLine and currentSilentAimTarget then
+			local cam = workspace.CurrentCamera
+			local pos, onScreen = cam:WorldToViewportPoint(currentSilentAimTarget.Position)
+
+			if onScreen then
+				local p = GetSilentAimOrigin()
+				LockLine.Visible = true
+				LockLine.From = p
+				LockLine.To = Vector2.new(pos.X, pos.Y)
+			else
+				LockLine.Visible = false
+			end
+		else
+			LockLine.Visible = false
+		end
+	end
+end)
+
+-- Selector simple dentro de PVP: Nearest -> jugadores disponibles.
+local aimbotTargetBtn = Instance.new("TextButton")
+aimbotTargetBtn.Size = UDim2.new(0.9, 0, 0, 20)
+aimbotTargetBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+aimbotTargetBtn.Text = "🎯 Target: Nearest"
+aimbotTargetBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+aimbotTargetBtn.TextSize = 9
+aimbotTargetBtn.Font = Enum.Font.GothamBold
+aimbotTargetBtn.Parent = pvpScroll
+Instance.new("UICorner", aimbotTargetBtn).CornerRadius = UDim.new(0, 4)
+
+aimbotTargetBtn.MouseButton1Click:Connect(function()
+	local plist = {"Nearest"}
+
+	for _, p in ipairs(Players:GetPlayers()) do
+		if p ~= player then
+			table.insert(plist, p.Name)
+		end
+	end
+
+	local currentName =
+		(_G.G_SilentAimSelectedPlayer ~= "" and _G.G_SilentAimSelectedPlayer)
+		or "Nearest"
+
+	local currIdx = table.find(plist, currentName) or 1
+	local nextIdx = (currIdx % #plist) + 1
+
+	if plist[nextIdx] == "Nearest" then
+		_G.G_SilentAimSelectedPlayer = ""
+	else
+		_G.G_SilentAimSelectedPlayer = plist[nextIdx]
+	end
+
+	aimbotTargetBtn.Text = "🎯 Target: " .. plist[nextIdx]
 end)
 
 local hitBoxBtn = Instance.new("TextButton")
