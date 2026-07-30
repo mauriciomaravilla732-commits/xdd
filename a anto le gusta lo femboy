@@ -1083,14 +1083,14 @@ macroSubBtn.Parent = pvpScroll
 Instance.new("UICorner", macroSubBtn).CornerRadius = UDim.new(0, 4)
 
 ----------------------------------------------------
--- PANEL MACRO COMBO (PORTAL + TTK)
--- El Godhuman C NO se incluye: lo hace el usuario manualmente.
---
--- Secuencia automática:
+-- PANEL MACRO COMBO (GODHUMAN C + TTK + PORTAL)
+-- El usuario hace Godhuman C manualmente.
+-- Al pulsar C con Godhuman equipado, se ejecuta:
 -- 1) TTK X
 -- 2) TTK Z
--- 3) Portal Z
--- 4) Fin del macro; el acercamiento lo hace el usuario manualmente
+-- 3) Cambio inmediato a Portal
+-- 4) Portal Z
+-- No incluye acercamiento automático.
 ----------------------------------------------------
 
 local macroFrame = Instance.new("Frame")
@@ -1136,7 +1136,7 @@ _G.MacroDelay = 0.20
 local macroInfo = Instance.new("TextLabel")
 macroInfo.Size = UDim2.new(0.92, 0, 0, 48)
 macroInfo.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-macroInfo.Text = "Haz Godhuman C tú mismo.\nLuego toca MACRO para: TTK X → TTK Z → Portal Z."
+macroInfo.Text = "Activa MACRO y haz Godhuman C tú mismo.\nAl pulsar C: TTK X → TTK Z → Portal Z."
 macroInfo.TextColor3 = Color3.fromRGB(220, 220, 230)
 macroInfo.TextSize = 9
 macroInfo.Font = Enum.Font.GothamMedium
@@ -1147,7 +1147,7 @@ Instance.new("UICorner", macroInfo).CornerRadius = UDim.new(0, 5)
 local macroStepLabel = Instance.new("TextLabel")
 macroStepLabel.Size = UDim2.new(0.92, 0, 0, 54)
 macroStepLabel.BackgroundTransparency = 1
-macroStepLabel.Text = "1️⃣ TTK X\n2️⃣ TTK Z\n3️⃣ Portal Z\n4️⃣ Tú haces el acercamiento"
+macroStepLabel.Text = "1️⃣ Godhuman C (manual)\n2️⃣ TTK X → TTK Z\n3️⃣ Portal Z\n4️⃣ Sin acercamiento automático"
 macroStepLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
 macroStepLabel.TextSize = 9
 macroStepLabel.Font = Enum.Font.GothamBold
@@ -1225,33 +1225,13 @@ local function equipMacroSlot(slotKey)
 	return getEquippedTool() ~= nil
 end
 
-local function getMacroClosestPlayer(maxDistance)
-	local char = player.Character
-	local myRoot = char and char:FindFirstChild("HumanoidRootPart")
-	if not myRoot then
-		return nil
+local function isGodhumanEquipped()
+	local tool = getEquippedTool()
+	if not tool then
+		return false
 	end
 
-	local closestRoot = nil
-	local closestDistance = maxDistance or 1000
-
-	for _, p in ipairs(Players:GetPlayers()) do
-		if p ~= player and p.Character then
-			local hum = p.Character:FindFirstChildOfClass("Humanoid")
-			local root = p.Character:FindFirstChild("HumanoidRootPart")
-
-			if hum and hum.Health > 0 and root then
-				local distance = (root.Position - myRoot.Position).Magnitude
-
-				if distance < closestDistance then
-					closestDistance = distance
-					closestRoot = root
-				end
-			end
-		end
-	end
-
-	return closestRoot
+	return string.find(string.lower(tool.Name), "godhuman", 1, true) ~= nil
 end
 
 local function executeMacroCombo()
@@ -1261,37 +1241,36 @@ local function executeMacroCombo()
 
 	if not _G.MacroEnabled then
 		macroRunBtn.Text = "⚠️ ACTIVA MACRO"
-		task.delay(1.0, function()
+		task.delay(0.8, function()
 			if macroRunBtn and macroRunBtn.Parent then
-				macroRunBtn.Text = "💥 EJECUTAR MACRO"
+				macroRunBtn.Text = "💥 ESPERANDO GODHUMAN C"
 			end
 		end)
 		return
 	end
 
 	_G.MacroExecuting = true
-	macroRunBtn.Text = "⏳ EJECUTANDO..."
+	macroRunBtn.Text = "⏳ COMBO..."
 
 	local ok = pcall(function()
 		-- 1) TTK X
-		equipMacroSlot(MACRO_SLOT_TTK)
-		task.wait(0.06)
-		pressMacroKey(Enum.KeyCode.X)
-		task.wait(_G.MacroDelay)
+		if equipMacroSlot(MACRO_SLOT_TTK) then
+			task.wait(0.06)
+			pressMacroKey(Enum.KeyCode.X)
+			task.wait(_G.MacroDelay)
 
-		-- 2) TTK Z
-		pressMacroKey(Enum.KeyCode.Z)
-		task.wait(_G.MacroDelay)
+			-- 2) TTK Z
+			pressMacroKey(Enum.KeyCode.Z)
 
-		-- 3) Portal Z
-		equipMacroSlot(MACRO_SLOT_PORTAL)
-		task.wait(0.06)
-		pressMacroKey(Enum.KeyCode.Z)
-		task.wait(0.08)
+			-- 3) Cambio inmediato a Portal
+			task.wait(0.02)
 
-		-- Fin del macro.
-		-- El usuario hace manualmente el acercamiento con F + M1
-		-- o mediante Soru, según prefiera.
+			-- 4) Portal Z
+			if equipMacroSlot(MACRO_SLOT_PORTAL) then
+				task.wait(0.03)
+				pressMacroKey(Enum.KeyCode.Z)
+			end
+		end
 	end)
 
 	_G.MacroExecuting = false
@@ -1302,9 +1281,9 @@ local function executeMacroCombo()
 		macroRunBtn.Text = "❌ ERROR"
 	end
 
-	task.delay(1.0, function()
+	task.delay(0.8, function()
 		if macroRunBtn and macroRunBtn.Parent then
-			macroRunBtn.Text = "💥 EJECUTAR MACRO"
+			macroRunBtn.Text = "💥 ESPERANDO GODHUMAN C"
 		end
 	end)
 end
@@ -1332,6 +1311,21 @@ end)
 
 macroFloatBtn.MouseButton1Click:Connect(function()
 	task.spawn(executeMacroCombo)
+end)
+
+-- Disparador automático: el usuario pulsa C de Godhuman manualmente.
+-- Solo se activa si Godhuman está equipado y la macro está en ON.
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then
+		return
+	end
+
+	if input.KeyCode == Enum.KeyCode.C
+		and _G.MacroEnabled
+		and not _G.MacroExecuting
+		and isGodhumanEquipped() then
+		task.spawn(executeMacroCombo)
+	end
 end)
 
 updateMacroToggle()
