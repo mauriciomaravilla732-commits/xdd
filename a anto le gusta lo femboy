@@ -703,7 +703,7 @@ _G.G_SilentAimFOVMode = "Screen Center"
 _G.G_SilentAimTeamCheck = true
 _G.G_SilentAimSelectedPlayer = ""
 
-local SilentAimPlayersEnabled = false
+local SilentAimPlayersEnabled = true
 local SilentAimNPCsEnabled = false
 local maxRange = 2500
 
@@ -768,15 +768,14 @@ npcAimbotBtn.Parent = pvpScroll
 Instance.new("UICorner", npcAimbotBtn).CornerRadius = UDim.new(0, 4)
 
 playerAimbotBtn.MouseButton1Click:Connect(function()
-	local wasOn = SilentAimPlayersEnabled
+	SilentAimPlayersEnabled = not SilentAimPlayersEnabled
 
-	-- Los dos modos son separados: al activar Players,
-	-- desactiva NPC para evitar mezclar objetivos.
-	SilentAimPlayersEnabled = not wasOn
+	-- Si Players se activa, NPC se apaga.
 	if SilentAimPlayersEnabled then
 		SilentAimNPCsEnabled = false
 		SilentAimMode = "Players"
 	else
+		-- Al poner Players en OFF, se apaga completamente.
 		SilentAimMode = "None"
 	end
 
@@ -786,15 +785,14 @@ playerAimbotBtn.MouseButton1Click:Connect(function()
 end)
 
 npcAimbotBtn.MouseButton1Click:Connect(function()
-	local wasOn = SilentAimNPCsEnabled
+	SilentAimNPCsEnabled = not SilentAimNPCsEnabled
 
-	-- Los dos modos son separados: al activar NPC,
-	-- desactiva Players para evitar mezclar objetivos.
-	SilentAimNPCsEnabled = not wasOn
+	-- Si NPC se activa, Players se apaga.
 	if SilentAimNPCsEnabled then
 		SilentAimPlayersEnabled = false
 		SilentAimMode = "NPCs"
 	else
+		-- Al poner NPC en OFF, se apaga completamente.
 		SilentAimMode = "None"
 	end
 
@@ -814,6 +812,12 @@ function setAimbotState(state)
 	updatePlayerAimbotButton()
 	updateNpcAimbotButton()
 end
+
+-- Activado por defecto al abrir el script.
+-- El botón Players comienza en ON; el botón NPCs comienza en OFF.
+setAimbotState(true)
+updatePlayerAimbotButton()
+updateNpcAimbotButton()
 
 -- Team / ally helpers del código fuente.
 local function IsSilentAimAlly(p)
