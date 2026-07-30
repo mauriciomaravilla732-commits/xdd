@@ -1,0 +1,1566 @@
+-- Roblox UI Script / Fantasmitam Hub (Jump Balanced 1000 + Misc Clean + Save/Reset Config + Aimbot 360)
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+----------------------------------------------------
+-- PANTALLA DE CARGA (LOADING SCREEN - 3 SEGUNDOS)
+----------------------------------------------------
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "FantasmitamLoadingScreen"
+loadingGui.ResetOnSpawn = false
+loadingGui.IgnoreGuiInset = true
+loadingGui.Parent = playerGui
+
+local bgFrame = Instance.new("Frame")
+bgFrame.Size = UDim2.new(1, 0, 1, 0)
+bgFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+bgFrame.BorderSizePixel = 0
+bgFrame.Parent = loadingGui
+
+local logoImage = Instance.new("ImageLabel")
+logoImage.Size = UDim2.new(0, 180, 0, 180)
+logoImage.Position = UDim2.new(0.5, -90, 0.4, -90)
+logoImage.BackgroundTransparency = 1
+logoImage.Image = "rbxassetid://117943976047662"
+logoImage.Parent = bgFrame
+
+local barBackground = Instance.new("Frame")
+barBackground.Size = UDim2.new(0, 260, 0, 8)
+barBackground.Position = UDim2.new(0.5, -130, 0.4, 110)
+barBackground.BackgroundTransparency = 1
+barBackground.BorderSizePixel = 0
+barBackground.Parent = bgFrame
+
+local barFill = Instance.new("Frame")
+barFill.Size = UDim2.new(0, 0, 1, 0)
+barFill.BackgroundColor3 = Color3.fromRGB(150, 0, 255)
+barFill.BorderSizePixel = 0
+barFill.Parent = barBackground
+Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+
+local percentLabel = Instance.new("TextLabel")
+percentLabel.Size = UDim2.new(1, 0, 0, 20)
+percentLabel.Position = UDim2.new(0, 0, 1, 5)
+percentLabel.BackgroundTransparency = 1
+percentLabel.Text = "0%"
+percentLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+percentLabel.TextSize = 14
+percentLabel.Font = Enum.Font.GothamBold
+percentLabel.Parent = barBackground
+
+local loadDuration = 3
+local tweenInfoLoad = TweenInfo.new(loadDuration, Enum.EasingStyle.Linear)
+local loadTween = TweenService:Create(barFill, tweenInfoLoad, {Size = UDim2.new(1, 0, 1, 0)})
+
+loadTween:Play()
+
+local startTimeLoad = os.clock()
+task.spawn(function()
+	while (os.clock() - startTimeLoad) < loadDuration do
+		local progress = math.clamp((os.clock() - startTimeLoad) / loadDuration, 0, 1)
+		percentLabel.Text = math.floor(progress * 100) .. "%"
+		task.wait()
+	end
+	percentLabel.Text = "100%"
+end)
+
+task.wait(loadDuration)
+loadingGui:Destroy()
+
+----------------------------------------------------
+-- CONFIGURACIÓN DEL HUB
+----------------------------------------------------
+local commF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+local commE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
+local Net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
+
+if playerGui:FindFirstChild("FantasmitamHub") then
+	playerGui.FantasmitamHub:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "FantasmitamHub"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+----------------------------------------------------
+-- BOTÓN FLOTANTE PRINCIPAL
+----------------------------------------------------
+local toggleBtn = Instance.new("ImageButton")
+toggleBtn.Name = "FantasmitamButton"
+toggleBtn.Size = UDim2.new(0, 45, 0, 45)
+toggleBtn.Position = UDim2.new(0, 10, 0, 10)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+toggleBtn.BorderSizePixel = 0
+toggleBtn.Image = "rbxassetid://128588163156811"
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+toggleBtn.Parent = screenGui
+Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1, 0)
+
+local floatStroke = Instance.new("UIStroke")
+floatStroke.Color = Color3.fromRGB(150, 0, 255)
+floatStroke.Thickness = 2
+floatStroke.Parent = toggleBtn
+
+----------------------------------------------------
+-- PANEL PRINCIPAL (1ª UI)
+----------------------------------------------------
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 190, 0, 360)
+mainFrame.Position = UDim2.new(0, -200, 0, 10)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 25)
+titleLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+titleLabel.Text = "👻 FANTASMITAM HUB"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 10
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Parent = mainFrame
+Instance.new("UICorner", titleLabel).CornerRadius = UDim.new(0, 10)
+
+local timerLabel = Instance.new("TextLabel")
+timerLabel.Size = UDim2.new(1, 0, 0, 16)
+timerLabel.Position = UDim2.new(0, 0, 0, 25)
+timerLabel.BackgroundTransparency = 1
+timerLabel.Text = "⏱️ Tiempo: 00:00:00"
+timerLabel.TextColor3 = Color3.fromRGB(180, 180, 210)
+timerLabel.TextSize = 9
+timerLabel.Font = Enum.Font.GothamMedium
+timerLabel.Parent = mainFrame
+
+local startTime = os.time()
+task.spawn(function()
+	while task.wait(1) do
+		local elapsed = os.time() - startTime
+		local hours = math.floor(elapsed / 3600)
+		local mins = math.floor((elapsed % 3600) / 60)
+		local secs = elapsed % 60
+		timerLabel.Text = string.format("⏱️ Tiempo: %02d:%02d:%02d", hours, mins, secs)
+	end
+end)
+
+local mainScroll = Instance.new("ScrollingFrame")
+mainScroll.Size = UDim2.new(1, 0, 1, -45)
+mainScroll.Position = UDim2.new(0, 0, 0, 42)
+mainScroll.BackgroundTransparency = 1
+mainScroll.BorderSizePixel = 0
+mainScroll.ScrollBarThickness = 4
+mainScroll.CanvasSize = UDim2.new(0, 0, 0, 280)
+mainScroll.Parent = mainFrame
+
+local mainLayout = Instance.new("UIListLayout")
+mainLayout.Padding = UDim.new(0, 6)
+mainLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+mainLayout.Parent = mainScroll
+
+Instance.new("UIPadding", mainScroll).PaddingTop = UDim.new(0, 4)
+
+local fpsBootBtn = Instance.new("TextButton")
+fpsBootBtn.Size = UDim2.new(0.9, 0, 0, 20)
+fpsBootBtn.BackgroundColor3 = Color3.fromRGB(220, 100, 0)
+fpsBootBtn.Text = "⚡ FPS Fast Boot"
+fpsBootBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+fpsBootBtn.TextSize = 9
+fpsBootBtn.Font = Enum.Font.GothamMedium
+fpsBootBtn.Parent = mainScroll
+Instance.new("UICorner", fpsBootBtn).CornerRadius = UDim.new(0, 4)
+
+local playerBtn = Instance.new("TextButton")
+playerBtn.Size = UDim2.new(0.9, 0, 0, 20)
+playerBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 220)
+playerBtn.Text = "👤 Player Panel"
+playerBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+playerBtn.TextSize = 9
+playerBtn.Font = Enum.Font.GothamMedium
+playerBtn.Parent = mainScroll
+Instance.new("UICorner", playerBtn).CornerRadius = UDim.new(0, 4)
+
+local pvpBtn = Instance.new("TextButton")
+pvpBtn.Size = UDim2.new(0.9, 0, 0, 20)
+pvpBtn.BackgroundColor3 = Color3.fromRGB(200, 30, 60)
+pvpBtn.Text = "⚔️ PVP"
+pvpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+pvpBtn.TextSize = 9
+pvpBtn.Font = Enum.Font.GothamBold
+pvpBtn.Parent = mainScroll
+Instance.new("UICorner", pvpBtn).CornerRadius = UDim.new(0, 4)
+
+local miscBtn = Instance.new("TextButton")
+miscBtn.Size = UDim2.new(0.9, 0, 0, 20)
+miscBtn.BackgroundColor3 = Color3.fromRGB(130, 30, 210)
+miscBtn.Text = "🎲 Misc"
+miscBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+miscBtn.TextSize = 9
+miscBtn.Font = Enum.Font.GothamMedium
+miscBtn.Parent = mainScroll
+Instance.new("UICorner", miscBtn).CornerRadius = UDim.new(0, 4)
+
+----------------------------------------------------
+-- PANEL FPS FAST BOOT
+----------------------------------------------------
+local fpsFrame = Instance.new("Frame")
+fpsFrame.Name = "FpsFrame"
+fpsFrame.Size = UDim2.new(0, 210, 0, 360)
+fpsFrame.Position = UDim2.new(0, -220, 0, 10)
+fpsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+fpsFrame.BorderSizePixel = 0
+fpsFrame.Visible = false
+fpsFrame.Parent = screenGui
+Instance.new("UICorner", fpsFrame).CornerRadius = UDim.new(0, 10)
+
+local fpsTitle = Instance.new("TextLabel")
+fpsTitle.Size = UDim2.new(1, 0, 0, 25)
+fpsTitle.BackgroundColor3 = Color3.fromRGB(180, 80, 0)
+fpsTitle.Text = "⚡ FPS FAST BOOT"
+fpsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+fpsTitle.TextSize = 10
+fpsTitle.Font = Enum.Font.GothamBold
+fpsTitle.Parent = fpsFrame
+Instance.new("UICorner", fpsTitle).CornerRadius = UDim.new(0, 10)
+
+local fpsScroll = Instance.new("ScrollingFrame")
+fpsScroll.Size = UDim2.new(1, 0, 1, -30)
+fpsScroll.Position = UDim2.new(0, 0, 0, 30)
+fpsScroll.BackgroundTransparency = 1
+fpsScroll.BorderSizePixel = 0
+fpsScroll.ScrollBarThickness = 4
+fpsScroll.ScrollBarImageColor3 = Color3.fromRGB(220, 100, 0)
+fpsScroll.CanvasSize = UDim2.new(0, 0, 0, 320)
+fpsScroll.Parent = fpsFrame
+
+local fpsLayout = Instance.new("UIListLayout")
+fpsLayout.Padding = UDim.new(0, 6)
+fpsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+fpsLayout.Parent = fpsScroll
+
+Instance.new("UIPadding", fpsScroll).PaddingTop = UDim.new(0, 6)
+
+local statsBox = Instance.new("Frame")
+statsBox.Size = UDim2.new(0.9, 0, 0, 45)
+statsBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+statsBox.BorderSizePixel = 0
+statsBox.Parent = fpsScroll
+Instance.new("UICorner", statsBox).CornerRadius = UDim.new(0, 4)
+
+local fpsDisplay = Instance.new("TextLabel")
+fpsDisplay.Size = UDim2.new(1, -10, 0, 18)
+fpsDisplay.Position = UDim2.new(0, 5, 0, 3)
+fpsDisplay.BackgroundTransparency = 1
+fpsDisplay.Text = "🚀 FPS: Calculando..."
+fpsDisplay.TextColor3 = Color3.fromRGB(0, 255, 150)
+fpsDisplay.TextSize = 9
+fpsDisplay.Font = Enum.Font.GothamBold
+fpsDisplay.TextXAlignment = Enum.TextXAlignment.Left
+fpsDisplay.Parent = statsBox
+
+local pingDisplay = Instance.new("TextLabel")
+pingDisplay.Size = UDim2.new(1, -10, 0, 18)
+pingDisplay.Position = UDim2.new(0, 5, 0, 22)
+pingDisplay.BackgroundTransparency = 1
+pingDisplay.Text = "📡 Ping: Calculando..."
+pingDisplay.TextColor3 = Color3.fromRGB(0, 200, 255)
+pingDisplay.TextSize = 9
+pingDisplay.Font = Enum.Font.GothamBold
+pingDisplay.TextXAlignment = Enum.TextXAlignment.Left
+pingDisplay.Parent = statsBox
+
+local executeBox = Instance.new("Frame")
+executeBox.Size = UDim2.new(0.9, 0, 0, 22)
+executeBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+executeBox.BorderSizePixel = 0
+executeBox.Parent = fpsScroll
+Instance.new("UICorner", executeBox).CornerRadius = UDim.new(0, 4)
+
+local executeLabel = Instance.new("TextLabel")
+executeLabel.Size = UDim2.new(1, -10, 1, 0)
+executeLabel.Position = UDim2.new(0, 5, 0, 0)
+executeLabel.BackgroundTransparency = 1
+executeLabel.Text = "⚙️ Execute number: 0"
+executeLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+executeLabel.TextSize = 9
+executeLabel.Font = Enum.Font.GothamBold
+executeLabel.TextXAlignment = Enum.TextXAlignment.Left
+executeLabel.Parent = executeBox
+
+local activeCount = 0
+local function updateExecuteCount(amount)
+	activeCount = math.max(0, activeCount + amount)
+	executeLabel.Text = "⚙️ Execute number: " .. tostring(activeCount)
+end
+
+local fpsMoresBtn = Instance.new("TextButton")
+fpsMoresBtn.Size = UDim2.new(0.9, 0, 0, 20)
+fpsMoresBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+fpsMoresBtn.Text = "⚙️ FPS Mores (Slider)"
+fpsMoresBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+fpsMoresBtn.TextSize = 9
+fpsMoresBtn.Font = Enum.Font.GothamBold
+fpsMoresBtn.Parent = fpsScroll
+Instance.new("UICorner", fpsMoresBtn).CornerRadius = UDim.new(0, 4)
+
+local noAnimBtn = Instance.new("TextButton")
+noAnimBtn.Size = UDim2.new(0.9, 0, 0, 20)
+noAnimBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+noAnimBtn.Text = "🚫 No Animaciones: OFF"
+noAnimBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+noAnimBtn.TextSize = 9
+noAnimBtn.Font = Enum.Font.GothamBold
+noAnimBtn.Parent = fpsScroll
+Instance.new("UICorner", noAnimBtn).CornerRadius = UDim.new(0, 4)
+
+_G.NoAnimations = false
+
+noAnimBtn.MouseButton1Click:Connect(function()
+	_G.NoAnimations = not _G.NoAnimations
+	if _G.NoAnimations then
+		noAnimBtn.Text = "🚫 No Animaciones: ON"
+		noAnimBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
+		updateExecuteCount(1)
+	else
+		noAnimBtn.Text = "🚫 No Animaciones: OFF"
+		noAnimBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+		updateExecuteCount(-1)
+
+		pcall(function()
+			local char = player.Character
+			if char and char:FindFirstChild("Animate") then
+				char.Animate.Disabled = false
+			end
+		end)
+	end
+end)
+
+RunService.Stepped:Connect(function()
+	if _G.NoAnimations then
+		pcall(function()
+			local char = player.Character
+			if char then
+				if char:FindFirstChild("Animate") then
+					char.Animate.Disabled = true
+				end
+				local humanoid = char:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid:FindFirstChildOfClass("Animator") then
+					for _, track in pairs(humanoid.Animator:GetPlayingAnimationTracks()) do
+						track:Stop(0)
+					end
+				end
+			end
+		end)
+	end
+end)
+
+local fastFlagBtn = Instance.new("TextButton")
+fastFlagBtn.Size = UDim2.new(0.9, 0, 0, 20)
+fastFlagBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+fastFlagBtn.Text = "🚩 Fast Flag: OFF"
+fastFlagBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+fastFlagBtn.TextSize = 9
+fastFlagBtn.Font = Enum.Font.GothamBold
+fastFlagBtn.Parent = fpsScroll
+Instance.new("UICorner", fastFlagBtn).CornerRadius = UDim.new(0, 4)
+
+_G.FastFlagActive = false
+
+fastFlagBtn.MouseButton1Click:Connect(function()
+	_G.FastFlagActive = not _G.FastFlagActive
+
+	if _G.FastFlagActive then
+		fastFlagBtn.Text = "🚩 Fast Flag: ON"
+		fastFlagBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
+		updateExecuteCount(1)
+
+		pcall(function()
+			settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+			Lighting.GlobalShadows = false
+			Lighting.FogEnd = 9e9
+			Lighting.Brightness = 0
+			Lighting.Technology = Enum.Technology.Compatibility
+
+			for _, v in pairs(Lighting:GetChildren()) do
+				if v:IsA("PostEffect") or v:IsA("Atmosphere") or v:IsA("Sky") or v:IsA("Clouds") then
+					v:Destroy()
+				end
+			end
+
+			local function applyOptimizations(obj)
+				if obj:IsA("BasePart") then
+					obj.Material = Enum.Material.SmoothPlastic
+					obj.Reflectance = 0
+					obj.CastShadow = false
+				elseif obj:IsA("Decal") or obj:IsA("Texture") then
+					obj:Destroy()
+				elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Smoke") or obj:IsA("Fire") or obj:IsA("Sparkles") then
+					obj.Enabled = false
+				end
+			end
+
+			for _, desc in pairs(workspace:GetDescendants()) do
+				applyOptimizations(desc)
+			end
+
+			workspace.DescendantAdded:Connect(function(desc)
+				if _G.FastFlagActive then
+					applyOptimizations(desc)
+				end
+			end)
+		end)
+	else
+		fastFlagBtn.Text = "🚩 Fast Flag: OFF"
+		fastFlagBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+		updateExecuteCount(-1)
+	end
+end)
+
+----------------------------------------------------
+-- PANEL SLIDER DE FPS
+----------------------------------------------------
+local moresMenu = Instance.new("Frame")
+moresMenu.Name = "MoresMenu"
+moresMenu.Size = UDim2.new(0, 210, 0, 110)
+moresMenu.Position = UDim2.new(0, -220, 0, 10)
+moresMenu.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+moresMenu.BorderSizePixel = 0
+moresMenu.Visible = false
+moresMenu.Parent = screenGui
+Instance.new("UICorner", moresMenu).CornerRadius = UDim.new(0, 10)
+
+local moresTitle = Instance.new("TextLabel")
+moresTitle.Size = UDim2.new(1, 0, 0, 25)
+moresTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+moresTitle.Text = "🎛️ FPS Custom Limit"
+moresTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+moresTitle.TextSize = 10
+moresTitle.Font = Enum.Font.GothamBold
+moresTitle.Parent = moresMenu
+Instance.new("UICorner", moresTitle).CornerRadius = UDim.new(0, 10)
+
+local targetFpsLabel = Instance.new("TextLabel")
+targetFpsLabel.Size = UDim2.new(1, 0, 0, 18)
+targetFpsLabel.Position = UDim2.new(0, 0, 0, 32)
+targetFpsLabel.BackgroundTransparency = 1
+targetFpsLabel.Font = Enum.Font.GothamBold
+targetFpsLabel.Text = "60 FPS"
+targetFpsLabel.TextColor3 = Color3.fromRGB(0, 255, 150)
+targetFpsLabel.TextSize = 11
+targetFpsLabel.Parent = moresMenu
+
+local sliderTrack = Instance.new("Frame")
+sliderTrack.Name = "SliderTrack"
+sliderTrack.Size = UDim2.new(0, 160, 0, 6)
+sliderTrack.Position = UDim2.new(0.5, -80, 0, 62)
+sliderTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+sliderTrack.BorderSizePixel = 0
+sliderTrack.Parent = moresMenu
+Instance.new("UICorner", sliderTrack).CornerRadius = UDim.new(1, 0)
+
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0, 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
+sliderFill.BorderSizePixel = 0
+sliderFill.Parent = sliderTrack
+Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0)
+
+local sliderKnob = Instance.new("ImageButton")
+sliderKnob.Size = UDim2.new(0, 12, 0, 12)
+sliderKnob.Position = UDim2.new(1, -6, 0.5, -6)
+sliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+sliderKnob.BorderSizePixel = 0
+sliderKnob.Parent = sliderFill
+Instance.new("UICorner", sliderKnob).CornerRadius = UDim.new(1, 0)
+
+local minFps, maxFps = 60, 240
+local dragging = false
+
+local function setFpsCap(val)
+	pcall(function()
+		if setfpscap then
+			setfpscap(val)
+		elseif set_fps_cap then
+			set_fps_cap(val)
+		elseif setfps then
+			setfps(val)
+		end
+	end)
+end
+
+local function updateSlider(input)
+	local posX = math.clamp(input.Position.X - sliderTrack.AbsolutePosition.X, 0, sliderTrack.AbsoluteSize.X)
+	local percentage = posX / sliderTrack.AbsoluteSize.X
+	
+	local steps = math.floor(((percentage * (maxFps - minFps)) + 5) / 10)
+	local currentFps = math.clamp(minFps + (steps * 10), minFps, maxFps)
+	
+	local visualPercent = (currentFps - minFps) / (maxFps - minFps)
+	sliderFill.Size = UDim2.new(visualPercent, 0, 1, 0)
+	targetFpsLabel.Text = tostring(currentFps) .. " FPS"
+	
+	setFpsCap(currentFps)
+end
+
+sliderKnob.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+	end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = false
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		updateSlider(input)
+	end
+end)
+
+local frameCount = 0
+local lastUpdate = os.clock()
+local currentFpsVal = 60
+local currentPingVal = 0
+
+RunService.RenderStepped:Connect(function()
+	frameCount = frameCount + 1
+	local currentTime = os.clock()
+	if currentTime - lastUpdate >= 1 then
+		currentFpsVal = math.floor(frameCount / (currentTime - lastUpdate))
+		fpsDisplay.Text = "🚀 FPS Exactos: " .. tostring(currentFpsVal)
+		frameCount = 0
+		lastUpdate = currentTime
+	end
+end)
+
+task.spawn(function()
+	while task.wait(0.5) do
+		pcall(function()
+			currentPingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+		end)
+		pingDisplay.Text = "📡 Ping Exacto: " .. tostring(currentPingVal)
+	end
+end)
+
+----------------------------------------------------
+-- PANEL PVP (2ª UI)
+----------------------------------------------------
+local pvpFrame = Instance.new("Frame")
+pvpFrame.Name = "PvpFrame"
+pvpFrame.Size = UDim2.new(0, 210, 0, 360)
+pvpFrame.Position = UDim2.new(0, -220, 0, 10)
+pvpFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+pvpFrame.BorderSizePixel = 0
+pvpFrame.Visible = false
+pvpFrame.Parent = screenGui
+Instance.new("UICorner", pvpFrame).CornerRadius = UDim.new(0, 10)
+
+local pvpTitle = Instance.new("TextLabel")
+pvpTitle.Size = UDim2.new(1, 0, 0, 25)
+pvpTitle.BackgroundColor3 = Color3.fromRGB(170, 20, 50)
+pvpTitle.Text = "⚔️ PVP"
+pvpTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+pvpTitle.TextSize = 10
+pvpTitle.Font = Enum.Font.GothamBold
+pvpTitle.Parent = pvpFrame
+Instance.new("UICorner", pvpTitle).CornerRadius = UDim.new(0, 10)
+
+local pvpScroll = Instance.new("ScrollingFrame")
+pvpScroll.Size = UDim2.new(1, 0, 1, -30)
+pvpScroll.Position = UDim2.new(0, 0, 0, 30)
+pvpScroll.BackgroundTransparency = 1
+pvpScroll.BorderSizePixel = 0
+pvpScroll.ScrollBarThickness = 4
+pvpScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 30, 60)
+pvpScroll.CanvasSize = UDim2.new(0, 0, 0, 280)
+pvpScroll.Parent = pvpFrame
+
+local pvpLayout = Instance.new("UIListLayout")
+pvpLayout.Padding = UDim.new(0, 6)
+pvpLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+pvpLayout.Parent = pvpScroll
+
+Instance.new("UIPadding", pvpScroll).PaddingTop = UDim.new(0, 6)
+
+-- BOTÓN JUMP EQUILIBRADO (1000 DE IMPULSO)
+local superJumpBtn = Instance.new("TextButton")
+superJumpBtn.Size = UDim2.new(0.9, 0, 0, 20)
+superJumpBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+superJumpBtn.Text = "Jump Button: OFF"
+superJumpBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+superJumpBtn.TextSize = 9
+superJumpBtn.Font = Enum.Font.GothamBold
+superJumpBtn.Parent = pvpScroll
+Instance.new("UICorner", superJumpBtn).CornerRadius = UDim.new(0, 4)
+
+local jumpFloatBtn = Instance.new("TextButton")
+jumpFloatBtn.Name = "SuperJumpFloat"
+jumpFloatBtn.Size = UDim2.new(0, 50, 0, 40)
+jumpFloatBtn.Position = UDim2.new(0.85, 0, 0.5, 0)
+jumpFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+jumpFloatBtn.Text = "JUMP"
+jumpFloatBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+jumpFloatBtn.TextSize = 12
+jumpFloatBtn.Font = Enum.Font.GothamBold
+jumpFloatBtn.Visible = false
+jumpFloatBtn.Active = true
+jumpFloatBtn.Draggable = true
+jumpFloatBtn.Parent = screenGui
+Instance.new("UICorner", jumpFloatBtn).CornerRadius = UDim.new(0, 8)
+
+local jumpStroke = Instance.new("UIStroke")
+jumpStroke.Color = Color3.fromRGB(150, 150, 150)
+jumpStroke.Thickness = 1.5
+jumpStroke.Parent = jumpFloatBtn
+
+local function executeJump()
+	pcall(function()
+		local char = player.Character
+		if char and char:FindFirstChild("HumanoidRootPart") then
+			local hrp = char.HumanoidRootPart
+			
+			for _, v in pairs(hrp:GetChildren()) do
+				if v:IsA("BodyVelocity") and v.Name == "FantasmitamJump" then
+					v:Destroy()
+				end
+			end
+			
+			local bv = Instance.new("BodyVelocity")
+			bv.Name = "FantasmitamJump"
+			bv.MaxForce = Vector3.new(0, 50000, 0)
+			bv.Velocity = Vector3.new(0, 1000, 0)
+			bv.Parent = hrp
+
+			task.delay(0.15, function()
+				if bv then
+					bv:Destroy()
+				end
+			end)
+		end
+	end)
+end
+
+_G.SuperJumpActive = false
+
+local function setSuperJumpState(state)
+	_G.SuperJumpActive = state
+	if _G.SuperJumpActive then
+		superJumpBtn.Text = "Jump Button: ON"
+		superJumpBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
+		jumpFloatBtn.Visible = true
+	else
+		superJumpBtn.Text = "Jump Button: OFF"
+		superJumpBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+		jumpFloatBtn.Visible = false
+	end
+end
+
+superJumpBtn.MouseButton1Click:Connect(function()
+	setSuperJumpState(not _G.SuperJumpActive)
+	updateExecuteCount(_G.SuperJumpActive and 1 or -1)
+end)
+
+jumpFloatBtn.MouseButton1Click:Connect(function()
+	if _G.SuperJumpActive then
+		executeJump()
+	end
+end)
+
+----------------------------------------------------
+-- BOTÓN Y LÓGICA DE AIMBOT / AIMLOCK INTEGRADO
+-- Basado en las variables disponibles de AimlockPlayerEnabled.txt
+----------------------------------------------------
+
+local AimlockPlayerEnabled = false
+local AimlockNpcEnabled = false
+local SilentAimPlayersEnabled = false
+local SilentAimNPCsEnabled = false
+local PlayerWidgetActive = false
+local NpcWidgetActive = false
+local SelectedSoruTarget = "Nearest"
+local maxRange = 2500
+local PlayersPosition = nil
+local NPCPosition = nil
+
+_G.G_SilentAimSkill = false
+_G.G_SilentAimShowFOV = false
+_G.G_SilentAimFOV = 150
+_G.G_SilentAimPart = "Head"
+_G.G_SilentAimFOVThickness = 2
+_G.G_SilentAimFOVTransparency = 1
+_G.G_SilentAimTargetPlayers = false
+_G.G_SilentAimTargetMobs = false
+_G.G_SilentAimShowLine = false
+_G.G_SilentAimFOVMode = "Screen Center"
+_G.G_SilentAimTeamCheck = true
+_G.G_SilentAimSelectedPlayer = ""
+
+_G.AimbotActive = false
+
+local aimbotBtn = Instance.new("TextButton")
+aimbotBtn.Size = UDim2.new(0.9, 0, 0, 20)
+aimbotBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+aimbotBtn.Text = "🎯 Aimbot 360°: OFF"
+aimbotBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+aimbotBtn.TextSize = 9
+aimbotBtn.Font = Enum.Font.GothamBold
+aimbotBtn.Parent = pvpScroll
+Instance.new("UICorner", aimbotBtn).CornerRadius = UDim.new(0, 4)
+
+local Camera = workspace.CurrentCamera
+
+local function setAimbotState(state)
+	_G.AimbotActive = state
+	AimlockPlayerEnabled = state
+	_G.G_SilentAimTargetPlayers = state
+
+	if _G.AimbotActive then
+		aimbotBtn.Text = "🎯 Aimbot 360°: ON"
+		aimbotBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
+	else
+		aimbotBtn.Text = "🎯 Aimbot 360°: OFF"
+		aimbotBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	end
+end
+
+aimbotBtn.MouseButton1Click:Connect(function()
+	setAimbotState(not _G.AimbotActive)
+	updateExecuteCount(_G.AimbotActive and 1 or -1)
+end)
+
+-- Selector de objetivo derivado de la lógica disponible en AimlockPlayerEnabled.txt.
+-- Devuelve la parte raíz del jugador más cercano dentro de maxRange.
+local function getClosestAimPart()
+	local closest = nil
+	local shortestDistance = maxRange
+
+	local myChar = player.Character
+	local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
+	if not myRoot then
+		return nil
+	end
+
+	local myPos = myRoot.Position
+
+	if AimlockPlayerEnabled
+		or _G.G_SilentAimTargetPlayers
+		or _G.AimbotActive then
+
+		for _, v in pairs(Players:GetPlayers()) do
+			if v ~= player and v.Character then
+				local hum = v.Character:FindFirstChildOfClass("Humanoid")
+				local root = v.Character:FindFirstChild("HumanoidRootPart")
+				local head = v.Character:FindFirstChild("Head")
+
+				if hum and hum.Health > 0 and root then
+					local sameTeam = player.Team and v.Team == player.Team
+
+					if not (_G.G_SilentAimTeamCheck and sameTeam) then
+						local targetPart = (_G.G_SilentAimPart == "Head" and head) or root
+						local dist = (targetPart.Position - myPos).Magnitude
+
+						if dist <= shortestDistance then
+							shortestDistance = dist
+							closest = targetPart
+						end
+					end
+				end
+			end
+		end
+	end
+
+	return closest
+end
+
+-- Aimbot 360° usando el selector integrado.
+RunService.RenderStepped:Connect(function()
+	if not _G.AimbotActive then
+		return
+	end
+
+	local targetPart = getClosestAimPart()
+	if targetPart then
+		Camera = workspace.CurrentCamera or Camera
+		if Camera then
+			Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+		end
+	end
+end)
+
+local hitBoxBtn = Instance.new("TextButton")
+hitBoxBtn.Size = UDim2.new(0.9, 0, 0, 20)
+hitBoxBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+hitBoxBtn.Text = "🔮 Hitbox Expander (Soon)"
+hitBoxBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+hitBoxBtn.TextSize = 9
+hitBoxBtn.Font = Enum.Font.GothamBold
+hitBoxBtn.Parent = pvpScroll
+Instance.new("UICorner", hitBoxBtn).CornerRadius = UDim.new(0, 4)
+
+local macroSubBtn = Instance.new("TextButton")
+macroSubBtn.Size = UDim2.new(0.9, 0, 0, 20)
+macroSubBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+macroSubBtn.Text = "⚡ Macro Combo (Soon)"
+macroSubBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+macroSubBtn.TextSize = 9
+macroSubBtn.Font = Enum.Font.GothamBold
+macroSubBtn.Parent = pvpScroll
+Instance.new("UICorner", macroSubBtn).CornerRadius = UDim.new(0, 4)
+
+----------------------------------------------------
+-- PANEL MACRO COMBO (SOLO UI / SOON)
+----------------------------------------------------
+local macroFrame = Instance.new("Frame")
+macroFrame.Name = "MacroFrame"
+macroFrame.Size = UDim2.new(0, 210, 0, 130)
+macroFrame.Position = UDim2.new(0, -220, 0, 10)
+macroFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+macroFrame.BorderSizePixel = 0
+macroFrame.Visible = false
+macroFrame.Parent = screenGui
+Instance.new("UICorner", macroFrame).CornerRadius = UDim.new(0, 10)
+
+local macroTitle = Instance.new("TextLabel")
+macroTitle.Size = UDim2.new(1, 0, 0, 25)
+macroTitle.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+macroTitle.Text = "⚡ MACRO COMBO (SOON)"
+macroTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+macroTitle.TextSize = 10
+macroTitle.Font = Enum.Font.GothamBold
+macroTitle.Parent = macroFrame
+Instance.new("UICorner", macroTitle).CornerRadius = UDim.new(0, 10)
+
+local macroInfoLabel = Instance.new("TextLabel")
+macroInfoLabel.Size = UDim2.new(0.9, 0, 0, 80)
+macroInfoLabel.Position = UDim2.new(0.05, 0, 0, 35)
+macroInfoLabel.BackgroundTransparency = 1
+macroInfoLabel.Text = "⏳ Apartado de Macro deshabilitado temporalmente.\n\nEn espera de nuevo combo o script de macro."
+macroInfoLabel.TextColor3 = Color3.fromRGB(180, 180, 200)
+macroInfoLabel.TextSize = 9
+macroInfoLabel.Font = Enum.Font.Gotham
+macroInfoLabel.TextWrapped = true
+macroInfoLabel.Parent = macroFrame
+
+----------------------------------------------------
+-- PANEL MISC
+----------------------------------------------------
+local miscFrame = Instance.new("Frame")
+miscFrame.Name = "MiscFrame"
+miscFrame.Size = UDim2.new(0, 210, 0, 360)
+miscFrame.Position = UDim2.new(0, -220, 0, 10)
+miscFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+miscFrame.BorderSizePixel = 0
+miscFrame.Visible = false
+miscFrame.Parent = screenGui
+Instance.new("UICorner", miscFrame).CornerRadius = UDim.new(0, 10)
+
+local miscTitle = Instance.new("TextLabel")
+miscTitle.Size = UDim2.new(1, 0, 0, 25)
+miscTitle.BackgroundColor3 = Color3.fromRGB(110, 30, 180)
+miscTitle.Text = "🎲 MISC"
+miscTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+miscTitle.TextSize = 10
+miscTitle.Font = Enum.Font.GothamBold
+miscTitle.Parent = miscFrame
+Instance.new("UICorner", miscTitle).CornerRadius = UDim.new(0, 10)
+
+local miscScroll = Instance.new("ScrollingFrame")
+miscScroll.Size = UDim2.new(1, 0, 1, -30)
+miscScroll.Position = UDim2.new(0, 0, 0, 30)
+miscScroll.BackgroundTransparency = 1
+miscScroll.BorderSizePixel = 0
+miscScroll.ScrollBarThickness = 4
+miscScroll.ScrollBarImageColor3 = Color3.fromRGB(130, 30, 210)
+miscScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+miscScroll.Parent = miscFrame
+
+local miscLayout = Instance.new("UIListLayout")
+miscLayout.Padding = UDim.new(0, 6)
+miscLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+miscLayout.Parent = miscScroll
+
+Instance.new("UIPadding", miscScroll).PaddingTop = UDim.new(0, 6)
+
+_G.AutoKen = false
+_G.AutoHaki = false
+_G.GhostAttack = false
+
+local autoKenBtn = Instance.new("TextButton")
+autoKenBtn.Size = UDim2.new(0.9, 0, 0, 20)
+autoKenBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+autoKenBtn.Text = "👁️ Auto Ken: OFF"
+autoKenBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+autoKenBtn.TextSize = 9
+autoKenBtn.Font = Enum.Font.GothamBold
+autoKenBtn.Parent = miscScroll
+Instance.new("UICorner", autoKenBtn).CornerRadius = UDim.new(0, 4)
+
+local autoHakiBtn = Instance.new("TextButton")
+autoHakiBtn.Size = UDim2.new(0.9, 0, 0, 20)
+autoHakiBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+autoHakiBtn.Text = "🛡️ Auto Haki: OFF"
+autoHakiBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+autoHakiBtn.TextSize = 9
+autoHakiBtn.Font = Enum.Font.GothamBold
+autoHakiBtn.Parent = miscScroll
+Instance.new("UICorner", autoHakiBtn).CornerRadius = UDim.new(0, 4)
+
+local ghostAttackBtn = Instance.new("TextButton")
+ghostAttackBtn.Size = UDim2.new(0.9, 0, 0, 20)
+ghostAttackBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+ghostAttackBtn.Text = "👻 Ghost Attack: OFF"
+ghostAttackBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+ghostAttackBtn.TextSize = 9
+ghostAttackBtn.Font = Enum.Font.GothamBold
+ghostAttackBtn.Parent = miscScroll
+Instance.new("UICorner", ghostAttackBtn).CornerRadius = UDim.new(0, 4)
+
+local configSpacer = Instance.new("Frame")
+configSpacer.Size = UDim2.new(1, 0, 0, 5)
+configSpacer.BackgroundTransparency = 1
+configSpacer.Parent = miscScroll
+
+local saveConfigBtn = Instance.new("TextButton")
+saveConfigBtn.Size = UDim2.new(0.9, 0, 0, 20)
+saveConfigBtn.BackgroundColor3 = Color3.fromRGB(0, 130, 200)
+saveConfigBtn.Text = "💾 Save Config"
+saveConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+saveConfigBtn.TextSize = 9
+saveConfigBtn.Font = Enum.Font.GothamBold
+saveConfigBtn.Parent = miscScroll
+Instance.new("UICorner", saveConfigBtn).CornerRadius = UDim.new(0, 4)
+
+local resetConfigBtn = Instance.new("TextButton")
+resetConfigBtn.Size = UDim2.new(0.9, 0, 0, 20)
+resetConfigBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+resetConfigBtn.Text = "🔄 Reset Config"
+resetConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetConfigBtn.TextSize = 9
+resetConfigBtn.Font = Enum.Font.GothamBold
+resetConfigBtn.Parent = miscScroll
+Instance.new("UICorner", resetConfigBtn).CornerRadius = UDim.new(0, 4)
+
+local function setAutoKenState(state)
+	_G.AutoKen = state
+	if _G.AutoKen then
+		autoKenBtn.Text = "👁️ Auto Ken: ON"
+		autoKenBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
+	else
+		autoKenBtn.Text = "👁️ Auto Ken: OFF"
+		autoKenBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	end
+end
+
+local function setAutoHakiState(state)
+	_G.AutoHaki = state
+	if _G.AutoHaki then
+		autoHakiBtn.Text = "🛡️ Auto Haki: ON"
+		autoHakiBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
+	else
+		autoHakiBtn.Text = "🛡️ Auto Haki: OFF"
+		autoHakiBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	end
+end
+
+local function setGhostAttackState(state)
+	_G.GhostAttack = state
+	if _G.GhostAttack then
+		ghostAttackBtn.Text = "👻 Ghost Attack: ON"
+		ghostAttackBtn.BackgroundColor3 = Color3.fromRGB(0, 140, 80)
+	else
+		ghostAttackBtn.Text = "👻 Ghost Attack: OFF"
+		ghostAttackBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+	end
+end
+
+autoKenBtn.MouseButton1Click:Connect(function()
+	setAutoKenState(not _G.AutoKen)
+	updateExecuteCount(_G.AutoKen and 1 or -1)
+end)
+
+autoHakiBtn.MouseButton1Click:Connect(function()
+	setAutoHakiState(not _G.AutoHaki)
+	updateExecuteCount(_G.AutoHaki and 1 or -1)
+end)
+
+ghostAttackBtn.MouseButton1Click:Connect(function()
+	setGhostAttackState(not _G.GhostAttack)
+	updateExecuteCount(_G.GhostAttack and 1 or -1)
+end)
+
+local configFileName = "FantasmitamConfig.json"
+local HttpService = game:GetService("HttpService")
+
+local function saveCurrentConfig()
+	local configData = {
+		SuperJump = _G.SuperJumpActive,
+		Aimbot = _G.AimbotActive,
+		AutoKen = _G.AutoKen,
+		AutoHaki = _G.AutoHaki,
+		GhostAttack = _G.GhostAttack
+	}
+	pcall(function()
+		if writefile then
+			writefile(configFileName, HttpService:JSONEncode(configData))
+		end
+	end)
+end
+
+local function loadSavedConfig()
+	pcall(function()
+		if readfile and isfile and isfile(configFileName) then
+			local data = HttpService:JSONDecode(readfile(configFileName))
+			if data.SuperJump ~= nil then setSuperJumpState(data.SuperJump) end
+			if data.Aimbot ~= nil then setAimbotState(data.Aimbot) end
+			if data.AutoKen ~= nil then setAutoKenState(data.AutoKen) end
+			if data.AutoHaki ~= nil then setAutoHakiState(data.AutoHaki) end
+			if data.GhostAttack ~= nil then setGhostAttackState(data.GhostAttack) end
+		end
+	end)
+end
+
+local function resetAllConfig()
+	setSuperJumpState(false)
+	setAimbotState(false)
+	setAutoKenState(false)
+	setAutoHakiState(false)
+	setGhostAttackState(false)
+	pcall(function()
+		if delfile and isfile and isfile(configFileName) then
+			delfile(configFileName)
+		end
+	end)
+end
+
+saveConfigBtn.MouseButton1Click:Connect(function()
+	saveCurrentConfig()
+	saveConfigBtn.Text = "✅ ¡Config Guardada!"
+	task.wait(1.5)
+	saveConfigBtn.Text = "💾 Save Config"
+end)
+
+resetConfigBtn.MouseButton1Click:Connect(function()
+	resetAllConfig()
+	resetConfigBtn.Text = "✅ ¡Config Reiniciada!"
+	task.wait(1.5)
+	resetConfigBtn.Text = "🔄 Reset Config"
+end)
+
+loadSavedConfig()
+
+task.spawn(function()
+	while task.wait(0.5) do
+		if _G.AutoKen then pcall(function() commE:FireServer("Ken", true) end) end
+	end
+end)
+
+task.spawn(function()
+	while task.wait(1) do
+		if _G.AutoHaki then
+			pcall(function()
+				local char = player.Character
+				if char then
+					local hasBuso = char:FindFirstChild("HasBuso") or char:FindFirstChild("Buso")
+					if not hasBuso then
+						for _, child in pairs(char:GetChildren()) do
+							if child:IsA("BasePart") and child:FindFirstChild("HasBuso") then
+								hasBuso = true; break
+							end
+						end
+					end
+					if not hasBuso then task.spawn(function() commF:InvokeServer("Buso") end) end
+				end
+			end)
+		end
+	end
+end)
+
+task.spawn(function()
+	while task.wait(0.03) do
+		if _G.GhostAttack then
+			pcall(function()
+				local char = player.Character
+				if not char then return end
+				local tool = char:FindFirstChildOfClass("Tool")
+				if not tool then return end
+
+				local registerAttack = Net:FindFirstChild("RE/RegisterAttack")
+				if registerAttack then registerAttack:FireServer(0) end
+
+				local myRoot = char:FindFirstChild("HumanoidRootPart")
+				if not myRoot then return end
+
+				local closest, shortest = nil, 60
+				local enemies = workspace:FindFirstChild("Enemies")
+				if enemies then
+					for _, enemy in pairs(enemies:GetChildren()) do
+						if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+							local root = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Head")
+							if root then
+								local dist = (root.Position - myRoot.Position).Magnitude
+								if dist < shortest then shortest = dist; closest = enemy end
+							end
+						end
+					end
+				end
+
+				if closest then
+					local head = closest:FindFirstChild("Head") or closest:FindFirstChild("HumanoidRootPart")
+					local hrp = closest:FindFirstChild("HumanoidRootPart")
+					local registerHit = Net:FindFirstChild("RE/RegisterHit")
+					if head and hrp and registerHit then
+						registerHit:FireServer(head, {{closest, hrp}, closest}, nil, "078da5141")
+					end
+				end
+
+				tool:Activate()
+			end)
+		end
+	end
+end)
+
+----------------------------------------------------
+-- PANEL PLAYER
+----------------------------------------------------
+local playerFrame = Instance.new("Frame")
+playerFrame.Name = "PlayerFrame"
+playerFrame.Size = UDim2.new(0, 210, 0, 360)
+playerFrame.Position = UDim2.new(0, -220, 0, 10)
+playerFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+playerFrame.BorderSizePixel = 0
+playerFrame.Visible = false
+playerFrame.Parent = screenGui
+Instance.new("UICorner", playerFrame).CornerRadius = UDim.new(0, 10)
+
+local playerTitle = Instance.new("TextLabel")
+playerTitle.Size = UDim2.new(1, 0, 0, 25)
+playerTitle.BackgroundColor3 = Color3.fromRGB(0, 100, 170)
+playerTitle.Text = "👤 PLAYER PANEL"
+playerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+playerTitle.TextSize = 10
+playerTitle.Font = Enum.Font.GothamBold
+playerTitle.Parent = playerFrame
+Instance.new("UICorner", playerTitle).CornerRadius = UDim.new(0, 10)
+
+local playerScroll = Instance.new("ScrollingFrame")
+playerScroll.Size = UDim2.new(1, 0, 1, -30)
+playerScroll.Position = UDim2.new(0, 0, 0, 30)
+playerScroll.BackgroundTransparency = 1
+playerScroll.BorderSizePixel = 0
+playerScroll.ScrollBarThickness = 4
+playerScroll.CanvasSize = UDim2.new(0, 0, 0, 300)
+playerScroll.Parent = playerFrame
+
+local playerLayout = Instance.new("UIListLayout")
+playerLayout.Padding = UDim.new(0, 6)
+playerLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+playerLayout.Parent = playerScroll
+
+Instance.new("UIPadding", playerScroll).PaddingTop = UDim.new(0, 6)
+
+local avatarImg = Instance.new("ImageLabel")
+avatarImg.Size = UDim2.new(0, 60, 0, 60)
+avatarImg.BackgroundColor3 = Color3.fromRGB(15, 15, 22)
+avatarImg.BorderSizePixel = 0
+avatarImg.Parent = playerScroll
+Instance.new("UICorner", avatarImg).CornerRadius = UDim.new(1, 0)
+
+local avatarStroke = Instance.new("UIStroke")
+avatarStroke.Color = Color3.fromRGB(0, 140, 220)
+avatarStroke.Thickness = 2
+avatarStroke.Parent = avatarImg
+
+task.spawn(function()
+	local content = Players:GetUserThumbnailAsync(player.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size100x100)
+	avatarImg.Image = content
+end)
+
+local infoFrame = Instance.new("Frame")
+infoFrame.Size = UDim2.new(0.9, 0, 0, 70)
+infoFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+infoFrame.BorderSizePixel = 0
+infoFrame.Parent = playerScroll
+Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 4)
+
+local userLabel = Instance.new("TextLabel")
+userLabel.Size = UDim2.new(1, -10, 0, 20)
+userLabel.Position = UDim2.new(0, 5, 0, 4)
+userLabel.BackgroundTransparency = 1
+userLabel.Text = "User: " .. player.Name
+userLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+userLabel.TextSize = 9
+userLabel.Font = Enum.Font.Gotham
+userLabel.TextXAlignment = Enum.TextXAlignment.Left
+userLabel.Parent = infoFrame
+
+local idLabel = Instance.new("TextLabel")
+idLabel.Size = UDim2.new(1, -10, 0, 20)
+idLabel.Position = UDim2.new(0, 5, 0, 24)
+idLabel.BackgroundTransparency = 1
+idLabel.Text = "ID: " .. player.UserId
+idLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+idLabel.TextSize = 9
+idLabel.Font = Enum.Font.Gotham
+idLabel.TextXAlignment = Enum.TextXAlignment.Left
+idLabel.Parent = infoFrame
+
+local levelVal = "N/A"
+pcall(function()
+	if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
+		levelVal = player.Data.Level.Value
+	end
+end)
+
+local levelLabel = Instance.new("TextLabel")
+levelLabel.Size = UDim2.new(1, -10, 0, 20)
+levelLabel.Position = UDim2.new(0, 5, 0, 44)
+levelLabel.BackgroundTransparency = 1
+levelLabel.Text = "Level: " .. tostring(levelVal)
+levelLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+levelLabel.TextSize = 9
+levelLabel.Font = Enum.Font.GothamBold
+levelLabel.TextXAlignment = Enum.TextXAlignment.Left
+levelLabel.Parent = infoFrame
+
+local statsBtn = Instance.new("TextButton")
+statsBtn.Size = UDim2.new(0.9, 0, 0, 20)
+statsBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 120)
+statsBtn.Text = "📊 Player Panel Stats"
+statsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+statsBtn.TextSize = 9
+statsBtn.Font = Enum.Font.GothamBold
+statsBtn.Parent = playerScroll
+Instance.new("UICorner", statsBtn).CornerRadius = UDim.new(0, 4)
+
+----------------------------------------------------
+-- PLAYER STATS
+----------------------------------------------------
+local statsFrame = Instance.new("Frame")
+statsFrame.Name = "StatsFrame"
+statsFrame.Size = UDim2.new(0, 210, 0, 360)
+statsFrame.Position = UDim2.new(0, -220, 0, 10)
+statsFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+statsFrame.BorderSizePixel = 0
+statsFrame.Visible = false
+statsFrame.Parent = screenGui
+Instance.new("UICorner", statsFrame).CornerRadius = UDim.new(0, 10)
+
+local statsTitle = Instance.new("TextLabel")
+statsTitle.Size = UDim2.new(1, 0, 0, 25)
+statsTitle.BackgroundColor3 = Color3.fromRGB(0, 120, 90)
+statsTitle.Text = "📊 PLAYER STATS"
+statsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+statsTitle.TextSize = 10
+statsTitle.Font = Enum.Font.GothamBold
+statsTitle.Parent = statsFrame
+Instance.new("UICorner", statsTitle).CornerRadius = UDim.new(0, 10)
+
+local statsScroll = Instance.new("ScrollingFrame")
+statsScroll.Name = "StatsScroll"
+statsScroll.Size = UDim2.new(1, -4, 1, -30)
+statsScroll.Position = UDim2.new(0, 2, 0, 30)
+statsScroll.BackgroundTransparency = 1
+statsScroll.BorderSizePixel = 0
+statsScroll.Active = true
+statsScroll.ScrollBarThickness = 4
+statsScroll.ScrollBarImageColor3 = Color3.fromRGB(0, 200, 140)
+statsScroll.CanvasSize = UDim2.new(0, 0, 0, 390)
+statsScroll.Parent = statsFrame
+
+local statsLayout = Instance.new("UIListLayout")
+statsLayout.Padding = UDim.new(0, 6)
+statsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+statsLayout.Parent = statsScroll
+
+local statsInfoBox = Instance.new("Frame")
+statsInfoBox.Size = UDim2.new(0.9, 0, 0, 60)
+statsInfoBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+statsInfoBox.BorderSizePixel = 0
+statsInfoBox.Parent = statsScroll
+Instance.new("UICorner", statsInfoBox).CornerRadius = UDim.new(0, 4)
+
+local teamLabel = Instance.new("TextLabel")
+teamLabel.Size = UDim2.new(1, -10, 0, 16)
+teamLabel.Position = UDim2.new(0, 5, 0, 3)
+teamLabel.BackgroundTransparency = 1
+teamLabel.Text = "Team: " .. (player.Team and player.Team.Name or "Ninguno")
+teamLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+teamLabel.TextSize = 9
+teamLabel.Font = Enum.Font.GothamBold
+teamLabel.TextXAlignment = Enum.TextXAlignment.Left
+teamLabel.Parent = statsInfoBox
+
+local function formatBounty(num)
+	local str = tostring(num):reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
+	return "$" .. str
+end
+
+local bountyLabel = Instance.new("TextLabel")
+bountyLabel.Size = UDim2.new(1, -10, 0, 16)
+bountyLabel.Position = UDim2.new(0, 5, 0, 21)
+bountyLabel.BackgroundTransparency = 1
+bountyLabel.Text = "Bounty/Honor: $0"
+bountyLabel.TextColor3 = Color3.fromRGB(255, 200, 50)
+bountyLabel.TextSize = 9
+bountyLabel.Font = Enum.Font.Gotham
+bountyLabel.TextXAlignment = Enum.TextXAlignment.Left
+bountyLabel.Parent = statsInfoBox
+
+local earnedBountyLabel = Instance.new("TextLabel")
+earnedBountyLabel.Size = UDim2.new(1, -10, 0, 16)
+earnedBountyLabel.Position = UDim2.new(0, 5, 0, 39)
+earnedBountyLabel.BackgroundTransparency = 1
+earnedBountyLabel.Text = "Bounty Ganado: +$0"
+earnedBountyLabel.TextColor3 = Color3.fromRGB(0, 255, 120)
+earnedBountyLabel.TextSize = 9
+earnedBountyLabel.Font = Enum.Font.GothamBold
+earnedBountyLabel.TextXAlignment = Enum.TextXAlignment.Left
+earnedBountyLabel.Parent = statsInfoBox
+
+local initialBounty = nil
+
+local equipBox = Instance.new("Frame")
+equipBox.Size = UDim2.new(0.9, 0, 0, 100)
+equipBox.BackgroundColor3 = Color3.fromRGB(18, 18, 25)
+equipBox.BorderSizePixel = 0
+equipBox.Parent = statsScroll
+Instance.new("UICorner", equipBox).CornerRadius = UDim.new(0, 4)
+
+local categoryLabels = {}
+local prefixes = {"1- Melee: ", "2- Fruta: ", "3- Espada: ", "4- Pistola: "}
+
+for i = 1, 4 do
+	local itemLabel = Instance.new("TextLabel")
+	itemLabel.Size = UDim2.new(1, -10, 0, 18)
+	itemLabel.Position = UDim2.new(0, 8, 0, 8 + (i-1)*22)
+	itemLabel.BackgroundTransparency = 1
+	itemLabel.Text = prefixes[i] .. "Buscando..."
+	itemLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+	itemLabel.TextSize = 9
+	itemLabel.Font = Enum.Font.GothamMedium
+	itemLabel.TextXAlignment = Enum.TextXAlignment.Left
+	itemLabel.Parent = equipBox
+	categoryLabels[i] = itemLabel
+end
+
+local pirateBtn = Instance.new("TextButton")
+pirateBtn.Size = UDim2.new(0.9, 0, 0, 20)
+pirateBtn.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
+pirateBtn.Text = "🏴‍☠️ Team Piratas"
+pirateBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+pirateBtn.TextSize = 9
+pirateBtn.Font = Enum.Font.GothamBold
+pirateBtn.Parent = statsScroll
+Instance.new("UICorner", pirateBtn).CornerRadius = UDim.new(0, 4)
+
+local marineBtn = Instance.new("TextButton")
+marineBtn.Size = UDim2.new(0.9, 0, 0, 20)
+marineBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 190)
+marineBtn.Text = "⚓ Team Marines"
+marineBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+marineBtn.TextSize = 9
+marineBtn.Font = Enum.Font.GothamBold
+marineBtn.Parent = statsScroll
+Instance.new("UICorner", marineBtn).CornerRadius = UDim.new(0, 4)
+
+pirateBtn.MouseButton1Click:Connect(function() pcall(function() commF:InvokeServer("SetTeam2", "Pirates") end) end)
+marineBtn.MouseButton1Click:Connect(function() pcall(function() commF:InvokeServer("SetTeam2", "Marines") end) end)
+
+local gunNames = {
+	"Slingshot","Refined Slingshot","Flintlock","Musket","Cannon","Bazooka","Acidum Rifle",
+	"Kabucha","Serpent Bow","Soul Guitar","Venom Bow","Bizarre Rifle","Skull Guitar"
+}
+local fruitNames = {
+	"Rocket","Spin","Chop","Spring","Bomb","Smoke","Spike","Flame","Ice","Sand","Dark","Diamond",
+	"Light","Rubber","Barrier","Ghost","Magma","Quake","Buddha","Love","Spider","Sound","Phoenix",
+	"Portal","Rumble","Pain","Blizzard","Gravity","Mammoth","T-Rex","Dough","Shadow","Venom","Control",
+	"Gas","Spirit","Dragon","Leopard","Kitsune"
+}
+
+local function getToolType(tool)
+	if not tool:IsA("Tool") then return nil end
+	local name = tool.Name
+	local tooltip = tool:FindFirstChild("ToolTip") and tool.ToolTip.Value or ""
+
+	if tooltip == "Melee" or name:find("Combat") or name:find("Dark Step") or name:find("Electric") or name:find("Water") or name:find("Dragon") or name:find("Godhuman") or name:find("Sanguine") then
+		return "Melee", name
+	end
+
+	for _, g in ipairs(gunNames) do
+		if name == g or name:find(g) then return "Gun", name end
+	end
+	if tooltip == "Gun" or name:find("Bow") or name:find("Gun") or name:find("Rifle") or name:find("Cannon") or name:find("Slingshot") or name:find("Flintlock") or name:find("Musket") or name:find("Bazooka") or name:find("Guitar") then
+		return "Gun", name
+	end
+
+	for _, f in ipairs(fruitNames) do
+		if (name == f or name:find(f)) and not name:find("Bow") then
+			return "Fruit", name
+		end 
+	end
+	if tooltip == "Blox Fruit" then return "Fruit", name end
+
+	if tooltip == "Sword" or name:find("Katana") or name:find("Sword") or name:find("Saber") or name:find("Yoru") or name:find("Dagger") or name:find("Dark Blade") or name:find("Triple Katana") or name:find("Blade") then
+		return "Sword", name
+	end
+
+	return nil
+end
+
+local function updateEquipment()
+	local itemsFound = {Melee="Ninguno", Fruit="Ninguno", Sword="Ninguna", Gun="Ninguna"}
+	local function process(container)
+		if not container then return end
+		for _, tool in pairs(container:GetChildren()) do
+			local cat, n = getToolType(tool)
+			if cat then itemsFound[cat] = n end
+		end
+	end
+	process(player:FindFirstChild("Backpack"))
+	process(player.Character)
+	
+	categoryLabels[1].Text = "1- Melee: " .. itemsFound.Melee
+	categoryLabels[2].Text = "2- Fruta: " .. itemsFound.Fruit
+	categoryLabels[3].Text = "3- Espada: " .. itemsFound.Sword
+	categoryLabels[4].Text = "4- Pistola: " .. itemsFound.Gun
+	
+	teamLabel.Text = "Team: " .. (player.Team and player.Team.Name or "Ninguno")
+	
+	local bounty = 0
+	pcall(function()
+		if player:FindFirstChild("leaderstats") then
+			local b = player.leaderstats:FindFirstChild("Bounty/Honor") or player.leaderstats:FindFirstChild("Bounty")
+			if b then bounty = b.Value end
+		end
+	end)
+
+	if not initialBounty and bounty > 0 then
+		initialBounty = bounty
+	end
+
+	local earned = initialBounty and (bounty - initialBounty) or 0
+	local earnedSign = earned >= 0 and "+$" or "-$"
+
+	bountyLabel.Text = "Bounty/Honor: " .. formatBounty(bounty)
+	earnedBountyLabel.Text = "Bounty Ganado: " .. earnedSign .. formatBounty(math.abs(earned)):sub(2)
+end
+
+task.spawn(function()
+	while task.wait(2) do updateEquipment() end
+end)
+
+----------------------------------------------------
+-- ANIMACIONES Y LÓGICA DE APERTURA
+----------------------------------------------------
+local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+local function closeSubFrames()
+	for _, frame in ipairs({fpsFrame, pvpFrame, macroFrame, miscFrame, playerFrame, statsFrame, moresMenu}) do
+		if frame.Visible then
+			local t = TweenService:Create(frame, tweenInfo, {Position = UDim2.new(0, -220, 0, 10)})
+			t:Play()
+			t.Completed:Connect(function() frame.Visible = false end)
+		end
+	end
+end
+
+toggleBtn.MouseButton1Click:Connect(function()
+	if not mainFrame.Visible then
+		mainFrame.Visible = true
+		TweenService:Create(mainFrame, tweenInfo, {Position = UDim2.new(0, 10, 0, 10)}):Play()
+	else
+		closeSubFrames()
+		local t = TweenService:Create(mainFrame, tweenInfo, {Position = UDim2.new(0, -200, 0, 10)})
+		t:Play()
+		t.Completed:Connect(function() mainFrame.Visible = false end)
+	end
+end)
+
+fpsBootBtn.MouseButton1Click:Connect(function()
+	if not fpsFrame.Visible then
+		closeSubFrames()
+		fpsFrame.Visible = true
+		TweenService:Create(fpsFrame, tweenInfo, {Position = UDim2.new(0, 210, 0, 10)}):Play()
+	else
+		closeSubFrames()
+	end
+end)
+
+fpsMoresBtn.MouseButton1Click:Connect(function()
+	if not moresMenu.Visible then
+		moresMenu.Visible = true
+		TweenService:Create(moresMenu, tweenInfo, {Position = UDim2.new(0, 430, 0, 10)}):Play()
+	else
+		local t = TweenService:Create(moresMenu, tweenInfo, {Position = UDim2.new(0, -220, 0, 10)})
+		t:Play()
+		t.Completed:Connect(function() moresMenu.Visible = false end)
+	end
+end)
+
+playerBtn.MouseButton1Click:Connect(function()
+	if not playerFrame.Visible then
+		closeSubFrames()
+		playerFrame.Visible = true
+		TweenService:Create(playerFrame, tweenInfo, {Position = UDim2.new(0, 210, 0, 10)}):Play()
+	else
+		closeSubFrames()
+	end
+end)
+
+pvpBtn.MouseButton1Click:Connect(function()
+	if not pvpFrame.Visible then
+		closeSubFrames()
+		pvpFrame.Visible = true
+		TweenService:Create(pvpFrame, tweenInfo, {Position = UDim2.new(0, 210, 0, 10)}):Play()
+	else
+		closeSubFrames()
+	end
+end)
+
+macroSubBtn.MouseButton1Click:Connect(function()
+	if not macroFrame.Visible then
+		macroFrame.Visible = true
+		TweenService:Create(macroFrame, tweenInfo, {Position = UDim2.new(0, 430, 0, 10)}):Play()
+	else
+		local t = TweenService:Create(macroFrame, tweenInfo, {Position = UDim2.new(0, -220, 0, 10)})
+		t:Play()
+		t.Completed:Connect(function() macroFrame.Visible = false end)
+	end
+end)
+
+miscBtn.MouseButton1Click:Connect(function()
+	if not miscFrame.Visible then
+		closeSubFrames()
+		miscFrame.Visible = true
+		TweenService:Create(miscFrame, tweenInfo, {Position = UDim2.new(0, 210, 0, 10)}):Play()
+	else
+		closeSubFrames()
+	end
+end)
+
+statsBtn.MouseButton1Click:Connect(function()
+	if not statsFrame.Visible then
+		updateEquipment()
+		statsFrame.Visible = true
+		TweenService:Create(statsFrame, tweenInfo, {Position = UDim2.new(0, 430, 0, 10)}):Play()
+	else
+		local t = TweenService:Create(statsFrame, tweenInfo, {Position = UDim2.new(0, -220, 0, 10)})
+		t:Play()
+		t.Completed:Connect(function() statsFrame.Visible = false end)
+	end
+end)
