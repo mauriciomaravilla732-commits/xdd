@@ -80,12 +80,41 @@ loadingGui:Destroy()
 ----------------------------------------------------
 -- CONFIGURACIÓN DEL HUB
 ----------------------------------------------------
-local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
-local modulesFolder = ReplicatedStorage:FindFirstChild("Modules")
+local commF = nil
+local commE = nil
+local Net = nil
 
-local commF = remotesFolder and remotesFolder:FindFirstChild("CommF_")
-local commE = remotesFolder and remotesFolder:FindFirstChild("CommE")
-local Net = modulesFolder and modulesFolder:FindFirstChild("Net")
+-- No bloqueamos la creación de la UI esperando remotes.
+task.spawn(function()
+	pcall(function()
+		local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+		local modules = ReplicatedStorage:WaitForChild("Modules", 10)
+
+		if remotes then
+			commF = remotes:FindFirstChild("CommF_")
+			commE = remotes:FindFirstChild("CommE")
+		end
+
+		if modules then
+			Net = modules:FindFirstChild("Net")
+		end
+	end)
+end)
+
+-- Segundo intento por si los remotes aparecen después.
+task.delay(1, function()
+	pcall(function()
+		local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+		local modules = ReplicatedStorage:FindFirstChild("Modules")
+		if remotes then
+			commF = commF or remotes:FindFirstChild("CommF_")
+			commE = commE or remotes:FindFirstChild("CommE")
+		end
+		if modules then
+			Net = Net or modules:FindFirstChild("Net")
+		end
+	end)
+end)
 
 if playerGui:FindFirstChild("FantasmitamHub") then
 	playerGui.FantasmitamHub:Destroy()
@@ -601,7 +630,7 @@ pvpScroll.BackgroundTransparency = 1
 pvpScroll.BorderSizePixel = 0
 pvpScroll.ScrollBarThickness = 4
 pvpScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 30, 60)
-pvpScroll.CanvasSize = UDim2.new(0, 0, 0, 320)
+pvpScroll.CanvasSize = UDim2.new(0, 0, 0, 280)
 pvpScroll.Parent = pvpFrame
 
 local pvpLayout = Instance.new("UIListLayout")
@@ -1404,14 +1433,23 @@ updateMacroToggle()
 
 
 ----------------------------------------------------
+-- PANEL SORU (EXTRAÍDO DEL CÓDIGO SACRED AHK)
+-- Solo añade esta sección; el resto del Ghost Hub permanece intacto.
+----------------------------------------------------
+----------------------------------------------------
 -- PANEL DASH
--- Distancia 1-300 + botón flotante ON/OFF
+-- Distancia configurable de 1 a 300
+-- Botón flotante ON/OFF
 ----------------------------------------------------
 
 local DashEnabled = false
 local DashLongEnabled = false
 local DashLengthDist = 1
 local DashRunning = false
+
+----------------------------------------------------
+-- PANEL DASH
+----------------------------------------------------
 
 local dashFrame = Instance.new("Frame")
 dashFrame.Name = "DashFrame"
@@ -1421,7 +1459,12 @@ dashFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 dashFrame.BorderSizePixel = 0
 dashFrame.Visible = false
 dashFrame.Parent = screenGui
+
 Instance.new("UICorner", dashFrame).CornerRadius = UDim.new(0, 10)
+
+----------------------------------------------------
+-- TITULO
+----------------------------------------------------
 
 local dashTitle = Instance.new("TextLabel")
 dashTitle.Size = UDim2.new(1, 0, 0, 25)
@@ -1431,7 +1474,12 @@ dashTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 dashTitle.TextSize = 10
 dashTitle.Font = Enum.Font.GothamBold
 dashTitle.Parent = dashFrame
+
 Instance.new("UICorner", dashTitle).CornerRadius = UDim.new(0, 10)
+
+----------------------------------------------------
+-- TEXTO DEL VALOR
+----------------------------------------------------
 
 local dashValueLabel = Instance.new("TextLabel")
 dashValueLabel.Size = UDim2.new(1, 0, 0, 22)
@@ -1443,6 +1491,10 @@ dashValueLabel.TextSize = 12
 dashValueLabel.Font = Enum.Font.GothamBold
 dashValueLabel.Parent = dashFrame
 
+----------------------------------------------------
+-- SLIDER
+----------------------------------------------------
+
 local dashSliderTrack = Instance.new("Frame")
 dashSliderTrack.Name = "DashSliderTrack"
 dashSliderTrack.Size = UDim2.new(0, 165, 0, 6)
@@ -1451,6 +1503,7 @@ dashSliderTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
 dashSliderTrack.BorderSizePixel = 0
 dashSliderTrack.Active = true
 dashSliderTrack.Parent = dashFrame
+
 Instance.new("UICorner", dashSliderTrack).CornerRadius = UDim.new(1, 0)
 
 local dashSliderFill = Instance.new("Frame")
@@ -1458,6 +1511,7 @@ dashSliderFill.Size = UDim2.new(0, 0, 1, 0)
 dashSliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 150)
 dashSliderFill.BorderSizePixel = 0
 dashSliderFill.Parent = dashSliderTrack
+
 Instance.new("UICorner", dashSliderFill).CornerRadius = UDim.new(1, 0)
 
 local dashSliderKnob = Instance.new("TextButton")
@@ -1469,7 +1523,12 @@ dashSliderKnob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 dashSliderKnob.BorderSizePixel = 0
 dashSliderKnob.Text = ""
 dashSliderKnob.Parent = dashSliderTrack
+
 Instance.new("UICorner", dashSliderKnob).CornerRadius = UDim.new(1, 0)
+
+----------------------------------------------------
+-- BOTÓN MENOS
+----------------------------------------------------
 
 local dashMinusBtn = Instance.new("TextButton")
 dashMinusBtn.Size = UDim2.new(0, 65, 0, 25)
@@ -1480,7 +1539,12 @@ dashMinusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 dashMinusBtn.TextSize = 16
 dashMinusBtn.Font = Enum.Font.GothamBold
 dashMinusBtn.Parent = dashFrame
+
 Instance.new("UICorner", dashMinusBtn).CornerRadius = UDim.new(0, 6)
+
+----------------------------------------------------
+-- BOTÓN MAS
+----------------------------------------------------
 
 local dashPlusBtn = Instance.new("TextButton")
 dashPlusBtn.Size = UDim2.new(0, 65, 0, 25)
@@ -1491,7 +1555,12 @@ dashPlusBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 dashPlusBtn.TextSize = 16
 dashPlusBtn.Font = Enum.Font.GothamBold
 dashPlusBtn.Parent = dashFrame
+
 Instance.new("UICorner", dashPlusBtn).CornerRadius = UDim.new(0, 6)
+
+----------------------------------------------------
+-- TOGGLE DEL SISTEMA DASH
+----------------------------------------------------
 
 local dashToggleBtn = Instance.new("TextButton")
 dashToggleBtn.Size = UDim2.new(0.9, 0, 0, 25)
@@ -1502,7 +1571,12 @@ dashToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 dashToggleBtn.TextSize = 9
 dashToggleBtn.Font = Enum.Font.GothamBold
 dashToggleBtn.Parent = dashFrame
+
 Instance.new("UICorner", dashToggleBtn).CornerRadius = UDim.new(0, 5)
+
+----------------------------------------------------
+-- AYUDA
+----------------------------------------------------
 
 local dashHint = Instance.new("TextLabel")
 dashHint.Size = UDim2.new(0.9, 0, 0, 18)
@@ -1513,6 +1587,10 @@ dashHint.TextColor3 = Color3.fromRGB(145, 145, 165)
 dashHint.TextSize = 8
 dashHint.Font = Enum.Font.GothamMedium
 dashHint.Parent = dashFrame
+
+----------------------------------------------------
+-- BOTÓN FLOTANTE
+----------------------------------------------------
 
 local dashFloatBtn = Instance.new("TextButton")
 dashFloatBtn.Name = "DashFloat"
@@ -1527,6 +1605,7 @@ dashFloatBtn.Visible = false
 dashFloatBtn.Active = true
 dashFloatBtn.Draggable = true
 dashFloatBtn.Parent = screenGui
+
 Instance.new("UICorner", dashFloatBtn).CornerRadius = UDim.new(0, 8)
 
 local dashFloatStroke = Instance.new("UIStroke")
@@ -1534,173 +1613,346 @@ dashFloatStroke.Color = Color3.fromRGB(255, 255, 255)
 dashFloatStroke.Thickness = 1.5
 dashFloatStroke.Parent = dashFloatBtn
 
+----------------------------------------------------
+-- DASH NORMAL
+----------------------------------------------------
+
 local function setNormalDash()
+
 	pcall(function()
+
 		local char = player.Character
+
 		if char then
 			char:SetAttribute("DashLength", 1)
 			char:SetAttribute("DashLengthAir", 1)
 		end
+
 	end)
+
 end
 
+----------------------------------------------------
+-- DASH LARGO
+----------------------------------------------------
+
 local function setLongDash()
+
 	pcall(function()
+
 		local char = player.Character
+
 		if char then
 			char:SetAttribute("DashLength", DashLengthDist)
 			char:SetAttribute("DashLengthAir", DashLengthDist)
 		end
+
 	end)
+
 end
+
+----------------------------------------------------
+-- ACTUALIZAR ESTADO VISUAL
+----------------------------------------------------
 
 local function updateDashState()
+
 	if DashLongEnabled then
+
 		setLongDash()
+
 		dashFloatBtn.Text = "💨 ON"
 		dashFloatBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
+
 	else
+
 		setNormalDash()
+
 		dashFloatBtn.Text = "💨 OFF"
 		dashFloatBtn.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
+
 	end
+
 end
 
+----------------------------------------------------
+-- LOOP DASH
+----------------------------------------------------
+
 local function startDashLoop()
-	if DashRunning then return end
+
+	if DashRunning then
+		return
+	end
+
 	DashRunning = true
+
 	task.spawn(function()
+
 		while DashEnabled do
+
 			task.wait(0.1)
+
 			pcall(function()
+
 				local char = player.Character
-				if not char then return end
+
+				if not char then
+					return
+				end
+
 				if DashLongEnabled then
+
 					if char:GetAttribute("DashLength") ~= DashLengthDist then
 						char:SetAttribute("DashLength", DashLengthDist)
 					end
+
 					if char:GetAttribute("DashLengthAir") ~= DashLengthDist then
 						char:SetAttribute("DashLengthAir", DashLengthDist)
 					end
+
 				else
+
 					if char:GetAttribute("DashLength") ~= 1 then
 						char:SetAttribute("DashLength", 1)
 					end
+
 					if char:GetAttribute("DashLengthAir") ~= 1 then
 						char:SetAttribute("DashLengthAir", 1)
 					end
+
 				end
+
 			end)
+
 		end
+
 		DashRunning = false
+
 	end)
+
 end
+
+----------------------------------------------------
+-- ACTIVAR / DESACTIVAR SISTEMA
+----------------------------------------------------
 
 local function setDashEnabled(state)
+
 	DashEnabled = state
+
 	if DashEnabled then
+
 		dashFloatBtn.Visible = true
+
+		startDashLoop()
+
+		updateDashState()
+
 		dashToggleBtn.Text = "💨 Dash Config: ON"
 		dashToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
-		startDashLoop()
-		updateDashState()
+
 	else
+
 		DashLongEnabled = false
+
 		dashFloatBtn.Visible = false
+
+		setNormalDash()
+
 		dashToggleBtn.Text = "💨 Dash Config: OFF"
 		dashToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-		setNormalDash()
+
 	end
+
 end
 
+----------------------------------------------------
+-- CAMBIAR DISTANCIA
+----------------------------------------------------
+
 local function setDashDistance(value)
-	DashLengthDist = math.clamp(math.floor(tonumber(value) or 1), 1, 300)
-	dashValueLabel.Text = "Distancia: " .. tostring(DashLengthDist)
-	local percentage = (DashLengthDist - 1) / 299
-	dashSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-	dashSliderKnob.Position = UDim2.new(percentage, 0, 0.5, 0)
+
+	DashLengthDist = math.clamp(
+		math.floor(tonumber(value) or 1),
+		1,
+		300
+	)
+
+	dashValueLabel.Text =
+		"Distancia: " .. tostring(DashLengthDist)
+
+	local percentage =
+		(DashLengthDist - 1) / 299
+
+	dashSliderFill.Size =
+		UDim2.new(percentage, 0, 1, 0)
+
+	dashSliderKnob.Position =
+		UDim2.new(percentage, 0, 0.5, 0)
+
 	if DashLongEnabled then
 		setLongDash()
 	end
+
 end
 
-dashPlusBtn.MouseButton1Click:Connect(function()
-	setDashDistance(DashLengthDist + 1)
-end)
+----------------------------------------------------
+-- BOTÓN -
+----------------------------------------------------
 
 dashMinusBtn.MouseButton1Click:Connect(function()
-	setDashDistance(DashLengthDist - 1)
+
+	setDashDistance(
+		DashLengthDist - 1
+	)
+
 end)
+
+----------------------------------------------------
+-- BOTÓN +
+----------------------------------------------------
+
+dashPlusBtn.MouseButton1Click:Connect(function()
+
+	setDashDistance(
+		DashLengthDist + 1
+	)
+
+end)
+
+----------------------------------------------------
+-- SLIDER: CLICK + ARRASTRAR
+----------------------------------------------------
 
 local dashDragging = false
 
 local function updateDashSlider(input)
-	local trackSize = math.max(dashSliderTrack.AbsoluteSize.X, 1)
+
+	local trackStart =
+		dashSliderTrack.AbsolutePosition.X
+
+	local trackSize =
+		dashSliderTrack.AbsoluteSize.X
+
 	local percentage = math.clamp(
-		(input.Position.X - dashSliderTrack.AbsolutePosition.X) / trackSize,
+		(input.Position.X - trackStart) / trackSize,
 		0,
 		1
 	)
-	local value = math.floor(1 + percentage * 299 + 0.5)
+
+	local value = math.floor(
+		1 + (percentage * 299) + 0.5
+	)
+
 	setDashDistance(value)
+
 end
 
 dashSliderKnob.InputBegan:Connect(function(input)
+
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
+
 		dashDragging = true
+
 	end
+
 end)
 
 dashSliderTrack.InputBegan:Connect(function(input)
+
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
+
 		updateDashSlider(input)
 		dashDragging = true
+
 	end
+
 end)
 
 UserInputService.InputEnded:Connect(function(input)
+
 	if input.UserInputType == Enum.UserInputType.MouseButton1
 		or input.UserInputType == Enum.UserInputType.Touch then
+
 		dashDragging = false
+
 	end
+
 end)
 
 UserInputService.InputChanged:Connect(function(input)
-	if dashDragging
-		and (input.UserInputType == Enum.UserInputType.MouseMovement
-		or input.UserInputType == Enum.UserInputType.Touch) then
-		updateDashSlider(input)
+
+	if not dashDragging then
+		return
 	end
+
+	if input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		updateDashSlider(input)
+
+	end
+
 end)
+
+----------------------------------------------------
+-- TOGGLE DE LA UI
+----------------------------------------------------
 
 dashToggleBtn.MouseButton1Click:Connect(function()
-	setDashEnabled(not DashEnabled)
+
+	setDashEnabled(
+		not DashEnabled
+	)
+
 end)
+
+----------------------------------------------------
+-- BOTÓN FLOTANTE ON / OFF
+----------------------------------------------------
 
 dashFloatBtn.MouseButton1Click:Connect(function()
-	if not DashEnabled then return end
-	DashLongEnabled = not DashLongEnabled
+
+	if not DashEnabled then
+		return
+	end
+
+	DashLongEnabled =
+		not DashLongEnabled
+
 	updateDashState()
+
 end)
+
+----------------------------------------------------
+-- RESPAWN
+----------------------------------------------------
 
 player.CharacterAdded:Connect(function()
+
 	task.wait(0.5)
+
 	if DashEnabled then
+
 		startDashLoop()
 		updateDashState()
+
 	else
+
 		setNormalDash()
+
 	end
+
 end)
 
-setDashDistance(1)
+----------------------------------------------------
+-- VALORES INICIALES
+----------------------------------------------------
 
-----------------------------------------------------
--- PANEL SORU (EXTRAÍDO DEL CÓDIGO SACRED AHK)
--- Solo añade esta sección; el resto del Ghost Hub permanece intacto.
-----------------------------------------------------
+setDashDistance(1)
 
 local SoruInfinitoEnabled = false
 local SoruAimbotEnabled = false
@@ -2420,7 +2672,7 @@ task.spawn(function()
 				local tool = char:FindFirstChildOfClass("Tool")
 				if not tool then return end
 
-				local registerAttack = Net:FindFirstChild("RE/RegisterAttack")
+				local registerAttack = Net and Net:FindFirstChild("RE/RegisterAttack")
 				if registerAttack then registerAttack:FireServer(0) end
 
 				local myRoot = char:FindFirstChild("HumanoidRootPart")
@@ -2443,7 +2695,7 @@ task.spawn(function()
 				if closest then
 					local head = closest:FindFirstChild("Head") or closest:FindFirstChild("HumanoidRootPart")
 					local hrp = closest:FindFirstChild("HumanoidRootPart")
-					local registerHit = Net:FindFirstChild("RE/RegisterHit")
+					local registerHit = Net and Net:FindFirstChild("RE/RegisterHit")
 					if head and hrp and registerHit then
 						registerHit:FireServer(head, {{closest, hrp}, closest}, nil, "078da5141")
 					end
@@ -2791,11 +3043,34 @@ end)
 local tweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
 local function closeSubFrames()
-	for _, frame in ipairs({fpsFrame, pvpFrame, soruFrame, macroFrame, dashFrame, miscFrame, playerFrame, statsFrame, moresMenu}) do
+	for _, frame in ipairs({
+		fpsFrame,
+		pvpFrame,
+		soruFrame,
+		macroFrame,
+		dashFrame,
+		miscFrame,
+		playerFrame,
+		statsFrame,
+		moresMenu
+	}) do
+
 		if frame.Visible then
-			local t = TweenService:Create(frame, tweenInfo, {Position = UDim2.new(0, -220, 0, 10)})
+
+			local t = TweenService:Create(
+				frame,
+				tweenInfo,
+				{
+					Position = UDim2.new(0, -220, 0, 10)
+				}
+			)
+
 			t:Play()
-			t.Completed:Connect(function() frame.Visible = false end)
+
+			t.Completed:Connect(function()
+				frame.Visible = false
+			end)
+
 		end
 	end
 end
@@ -2874,16 +3149,44 @@ macroSubBtn.MouseButton1Click:Connect(function()
 	end
 end)
 
+----------------------------------------------------
+-- ABRIR / CERRAR DASH
+----------------------------------------------------
+
 dashSubBtn.MouseButton1Click:Connect(function()
+
 	if not dashFrame.Visible then
+
 		closeSubFrames()
+
 		dashFrame.Visible = true
-		TweenService:Create(dashFrame, tweenInfo, {Position = UDim2.new(0, 430, 0, 10)}):Play()
+
+		TweenService:Create(
+			dashFrame,
+			tweenInfo,
+			{
+				Position = UDim2.new(0, 430, 0, 10)
+			}
+		):Play()
+
 	else
-		local t = TweenService:Create(dashFrame, tweenInfo, {Position = UDim2.new(0, -220, 0, 10)})
+
+		local t = TweenService:Create(
+			dashFrame,
+			tweenInfo,
+			{
+				Position = UDim2.new(0, -220, 0, 10)
+			}
+		)
+
 		t:Play()
-		t.Completed:Connect(function() dashFrame.Visible = false end)
+
+		t.Completed:Connect(function()
+			dashFrame.Visible = false
+		end)
+
 	end
+
 end)
 
 miscBtn.MouseButton1Click:Connect(function()
