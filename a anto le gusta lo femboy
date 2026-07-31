@@ -80,9 +80,12 @@ loadingGui:Destroy()
 ----------------------------------------------------
 -- CONFIGURACIÓN DEL HUB
 ----------------------------------------------------
-local commF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
-local commE = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommE")
-local Net = ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Net")
+local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes")
+local modulesFolder = ReplicatedStorage:FindFirstChild("Modules")
+
+local commF = remotesFolder and remotesFolder:FindFirstChild("CommF_")
+local commE = remotesFolder and remotesFolder:FindFirstChild("CommE")
+local Net = modulesFolder and modulesFolder:FindFirstChild("Net")
 
 if playerGui:FindFirstChild("FantasmitamHub") then
 	playerGui.FantasmitamHub:Destroy()
@@ -598,7 +601,7 @@ pvpScroll.BackgroundTransparency = 1
 pvpScroll.BorderSizePixel = 0
 pvpScroll.ScrollBarThickness = 4
 pvpScroll.ScrollBarImageColor3 = Color3.fromRGB(200, 30, 60)
-pvpScroll.CanvasSize = UDim2.new(0, 0, 0, 280)
+pvpScroll.CanvasSize = UDim2.new(0, 0, 0, 320)
 pvpScroll.Parent = pvpFrame
 
 local pvpLayout = Instance.new("UIListLayout")
@@ -1083,8 +1086,9 @@ macroSubBtn.Parent = pvpScroll
 Instance.new("UICorner", macroSubBtn).CornerRadius = UDim.new(0, 4)
 
 ----------------------------------------------------
--- BOTÓN DASH
+-- BOTÓN DASH EN PVP
 ----------------------------------------------------
+
 local dashSubBtn = Instance.new("TextButton")
 dashSubBtn.Size = UDim2.new(0.9, 0, 0, 20)
 dashSubBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
@@ -1401,6 +1405,7 @@ updateMacroToggle()
 
 ----------------------------------------------------
 -- PANEL DASH
+-- Distancia 1-300 + botón flotante ON/OFF
 ----------------------------------------------------
 
 local DashEnabled = false
@@ -1439,6 +1444,7 @@ dashValueLabel.Font = Enum.Font.GothamBold
 dashValueLabel.Parent = dashFrame
 
 local dashSliderTrack = Instance.new("Frame")
+dashSliderTrack.Name = "DashSliderTrack"
 dashSliderTrack.Size = UDim2.new(0, 165, 0, 6)
 dashSliderTrack.Position = UDim2.new(0.5, -82, 0, 66)
 dashSliderTrack.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
@@ -1455,6 +1461,7 @@ dashSliderFill.Parent = dashSliderTrack
 Instance.new("UICorner", dashSliderFill).CornerRadius = UDim.new(1, 0)
 
 local dashSliderKnob = Instance.new("TextButton")
+dashSliderKnob.Name = "DashSliderKnob"
 dashSliderKnob.Size = UDim2.new(0, 12, 0, 12)
 dashSliderKnob.AnchorPoint = Vector2.new(0.5, 0.5)
 dashSliderKnob.Position = UDim2.new(0, 0, 0.5, 0)
@@ -1496,6 +1503,16 @@ dashToggleBtn.TextSize = 9
 dashToggleBtn.Font = Enum.Font.GothamBold
 dashToggleBtn.Parent = dashFrame
 Instance.new("UICorner", dashToggleBtn).CornerRadius = UDim.new(0, 5)
+
+local dashHint = Instance.new("TextLabel")
+dashHint.Size = UDim2.new(0.9, 0, 0, 18)
+dashHint.Position = UDim2.new(0.05, 0, 0, 157)
+dashHint.BackgroundTransparency = 1
+dashHint.Text = "1 - 300 • Paso: 1"
+dashHint.TextColor3 = Color3.fromRGB(145, 145, 165)
+dashHint.TextSize = 8
+dashHint.Font = Enum.Font.GothamMedium
+dashHint.Parent = dashFrame
 
 local dashFloatBtn = Instance.new("TextButton")
 dashFloatBtn.Name = "DashFloat"
@@ -1557,12 +1574,19 @@ local function startDashLoop()
 			task.wait(0.1)
 			pcall(function()
 				local char = player.Character
-				if char then
-					if DashLongEnabled then
+				if not char then return end
+				if DashLongEnabled then
+					if char:GetAttribute("DashLength") ~= DashLengthDist then
 						char:SetAttribute("DashLength", DashLengthDist)
+					end
+					if char:GetAttribute("DashLengthAir") ~= DashLengthDist then
 						char:SetAttribute("DashLengthAir", DashLengthDist)
-					else
+					end
+				else
+					if char:GetAttribute("DashLength") ~= 1 then
 						char:SetAttribute("DashLength", 1)
+					end
+					if char:GetAttribute("DashLengthAir") ~= 1 then
 						char:SetAttribute("DashLengthAir", 1)
 					end
 				end
@@ -1574,7 +1598,7 @@ end
 
 local function setDashEnabled(state)
 	DashEnabled = state
-	if state then
+	if DashEnabled then
 		dashFloatBtn.Visible = true
 		dashToggleBtn.Text = "💨 Dash Config: ON"
 		dashToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 80)
@@ -1592,11 +1616,9 @@ end
 local function setDashDistance(value)
 	DashLengthDist = math.clamp(math.floor(tonumber(value) or 1), 1, 300)
 	dashValueLabel.Text = "Distancia: " .. tostring(DashLengthDist)
-
 	local percentage = (DashLengthDist - 1) / 299
 	dashSliderFill.Size = UDim2.new(percentage, 0, 1, 0)
 	dashSliderKnob.Position = UDim2.new(percentage, 0, 0.5, 0)
-
 	if DashLongEnabled then
 		setLongDash()
 	end
@@ -1619,7 +1641,7 @@ local function updateDashSlider(input)
 		0,
 		1
 	)
-	local value = math.floor(1 + (percentage * 299) + 0.5)
+	local value = math.floor(1 + percentage * 299 + 0.5)
 	setDashDistance(value)
 end
 
